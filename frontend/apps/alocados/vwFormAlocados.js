@@ -72,7 +72,7 @@ async function carregarAnimaisToAlocados() {
   try {
     var data = await enviarRequisicaoAlocado('/getAnimaisToAlocados', {
       headers: dw3MontarHeadersAutenticacao()
-    }, 'Não foi possível carregar a lista de animal.');
+    }, 'Não foi possível carregar a lista de animais.');
 
     var select = document.getElementById('animalidifk');
     select.innerHTML = '<option value="">Selecione um animal</option>';
@@ -86,7 +86,7 @@ async function carregarAnimaisToAlocados() {
 
     $('#animalidifk').trigger('change');
   } catch (error) {
-    alert(error.message || 'Erro ao carregar animal.');
+    alert(error.message || 'Erro ao carregar animais.');
   }
 }
 
@@ -95,7 +95,7 @@ async function carregarPiquetesToAlocados() {
   try {
     var data = await enviarRequisicaoAlocado('/getPiquetesToAlocados', {
       headers: dw3MontarHeadersAutenticacao()
-    }, 'Não foi possível carregar a lista de piquete.');
+    }, 'Não foi possível carregar a lista de piquetes.');
 
     var select = document.getElementById('piqueteidfk');
     select.innerHTML = '<option value="">Selecione um piquete</option>';
@@ -109,7 +109,7 @@ async function carregarPiquetesToAlocados() {
 
     $('#piqueteidfk').trigger('change');
   } catch (error) {
-    alert(error.message || 'Erro ao carregar piquete.');
+    alert(error.message || 'Erro ao carregar piquetes.');
   }
 }
 
@@ -156,7 +156,9 @@ async function enviarRequisicaoAlocado(caminho, opcoes, mensagemErro) {
   var data = await response.json();
 
   if (data.auth === false) {
-    throw new Error(data.message || 'Sessão expirada. Faça login novamente.');
+    dw3SessaoExpirada(); // JWT expirado: volta para a tela de login.
+    // Promise que nunca termina: interrompe a operação sem mostrar outro alerta de erro.
+    return new Promise(function() {});
   }
 
   if (data.status !== 'ok') {
@@ -186,8 +188,10 @@ async function vwGetAlocadoByID() {
 
     // Carrega os componentes Select2 e seleciona o valor do registro.
     await carregarAnimaisToAlocados();
+    adicionarOpcaoSeFaltar('animalidifk', registro.animalidifk, registro.animalnome);
     $('#animalidifk').val(String(registro.animalidifk)).trigger('change');
     await carregarPiquetesToAlocados();
+    adicionarOpcaoSeFaltar('piqueteidfk', registro.piqueteidfk, registro.piquetedescricao);
     $('#piqueteidfk').val(String(registro.piqueteidfk)).trigger('change');
     return true;
   } catch (error) {
@@ -293,5 +297,18 @@ async function vwDeleteAlocado() {
     alert(error.message || 'Erro ao remover alocação.');
   } finally {
     btnRemover.disabled = false;
+  }
+}
+
+// Uma alocação antiga pode ser de um animal ou piquete que já foi removido.
+// Eles não vêm na lista do Select2, então a opção é acrescentada para o campo não ficar em branco.
+function adicionarOpcaoSeFaltar(idSelect, valor, texto) {
+  var select = document.getElementById(idSelect);
+
+  if (!select.querySelector('option[value="' + valor + '"]')) {
+    var option = document.createElement('option');
+    option.value = valor;
+    option.textContent = texto + ' (removido)';
+    select.appendChild(option);
   }
 }

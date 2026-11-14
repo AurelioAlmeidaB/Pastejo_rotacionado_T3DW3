@@ -38,7 +38,7 @@ const InsertPasto = async (registroPar) => {
       )
     ).rowCount;
   } catch (error) {
-    msg = "[mdlPastos|InsertPasto] " + error.detail;
+    msg = "[mdlPastos|InsertPasto] " + (error.detail || error.message);
     linhasAfetadas = -1;
   }
 
@@ -63,7 +63,7 @@ const UpdatePasto = async (pastoIDPar, registroPar) => {
       )
     ).rowCount;
   } catch (error) {
-    msg = "[mdlPastos|UpdatePasto] " + error.detail;
+    msg = "[mdlPastos|UpdatePasto] " + (error.detail || error.message);
     linhasAfetadas = -1;
   }
 
@@ -94,7 +94,7 @@ const DeletePasto = async (pastoIDPar) => {
       )
     ).rowCount;
   } catch (error) {
-    msg = "[mdlPastos|DeletePasto] " + error.detail;
+    msg = "[mdlPastos|DeletePasto] " + (error.detail || error.message);
     linhasAfetadas = -1;
   }
 

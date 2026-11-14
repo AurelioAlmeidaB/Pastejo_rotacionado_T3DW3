@@ -66,7 +66,7 @@ async function carregarPastosToPiquetes() {
   try {
     var data = await enviarRequisicaoPiquete('/getPastosToPiquetes', {
       headers: dw3MontarHeadersAutenticacao()
-    }, 'Não foi possível carregar a lista de pasto.');
+    }, 'Não foi possível carregar a lista de pastos.');
 
     var select = document.getElementById('pastoidfk');
     select.innerHTML = '<option value="">Selecione um pasto</option>';
@@ -80,7 +80,7 @@ async function carregarPastosToPiquetes() {
 
     $('#pastoidfk').trigger('change');
   } catch (error) {
-    alert(error.message || 'Erro ao carregar pasto.');
+    alert(error.message || 'Erro ao carregar pastos.');
   }
 }
 
@@ -127,7 +127,9 @@ async function enviarRequisicaoPiquete(caminho, opcoes, mensagemErro) {
   var data = await response.json();
 
   if (data.auth === false) {
-    throw new Error(data.message || 'Sessão expirada. Faça login novamente.');
+    dw3SessaoExpirada(); // JWT expirado: volta para a tela de login.
+    // Promise que nunca termina: interrompe a operação sem mostrar outro alerta de erro.
+    return new Promise(function() {});
   }
 
   if (data.status !== 'ok') {

@@ -11,7 +11,7 @@ const Login = async (req, res, next) => {
     return res.status(403).json({ message: "Usuário não identificado!" });
   }
 
-  if (bCrypt.compareSync(req.body.Password, credencial[0].password)) {
+  if (bCrypt.compareSync(req.body.Password || "", credencial[0].password)) {
     //auth ok
     const username = credencial[0].username;
     const token = jwt.sign({ username }, process.env.SECRET_API, {

@@ -156,10 +156,19 @@ Nos módulos com data (animais e alocados), a função **`formataData`** do cont
 **Regras de negócio no Delete** (para não deixar registros "órfãos"):
 
 - Pasto com piquetes ativos não pode ser removido.
-- Piquete com alocações ativas não pode ser removido.
-- Animal com alocações ativas não pode ser removido.
+- Piquete com alocação **em andamento** (sem data final) não pode ser removido.
+- Animal com alocação **em andamento** não pode ser removido.
+
+Alocações já encerradas não impedem a remoção: elas continuam no histórico (a lista de alocações mostra o nome do
+animal/piquete mesmo depois de removido, e o formulário mostra a opção marcada como "(removido)").
+
+**Regras de negócio da alocação** (função `ValidaAlocado` em `mdlAlocados.js`, usada no Insert e no Update):
+
+- a data final não pode ser menor que a data de início;
+- o mesmo animal não pode estar em dois piquetes ao mesmo tempo (períodos que se sobrepõem).
 
 Nesses casos o model devolve `linhasAfetadas: 0` e uma mensagem explicando o motivo, que a tela mostra ao usuário.
+Erros do banco (por exemplo, valor inválido ou chave estrangeira inexistente) também voltam em `status`.
 
 **Joins**: `GetAllPiquetes` traz junto o nome do pasto (`pastodescricao`) e `GetAllAlocados` traz o nome do animal
 (`animalnome`) e do piquete (`piquetedescricao`), para a tabela da tela mostrar nomes em vez de números.
@@ -212,7 +221,8 @@ os outros chamam cada API com `Authorization: Bearer {{accessToken}}`. Clique em
 ### 5.2 Login, token e logout
 
 - `apps/login/vwLogin.js`: no envio do formulário faz `POST /Login`. Se der certo, guarda o **JWT no `localStorage`**
-  (`token`), o nome do usuário (`username`) e cria o **cookie `IsLogged`**; depois vai para `/home`.
+  (`token`), o nome do usuário (`username`) e cria o **cookie `IsLogged`** com validade de 2 horas, o mesmo tempo
+  do JWT; depois vai para `/home`.
 - Ao abrir a tela de login (também pelo menu **Sair**), a função **`vwLogout`** chama `POST /Logout`, apaga o token e o cookie.
 
 ### 5.3 `public/js/dw3frontend.js` (funções comuns)
@@ -223,6 +233,7 @@ os outros chamam cada API com `Authorization: Bearer {{accessToken}}`. Clique em
 | `dw3ClearIsLoggedCookie()` | apaga o cookie `IsLogged` |
 | `dw3MontarHeadersAutenticacao(headers)` | acrescenta `Authorization: Bearer <token>` nas requisições |
 | `dw3OcultarBotao(id)` | esconde um botão |
+| `dw3SessaoExpirada()` | quando a API responde `auth: false` (JWT vencido ou inválido), apaga o token e o cookie, avisa e volta para o login |
 
 ### 5.4 Tela de lista (`vwLstXxx.js`)
 

@@ -38,7 +38,7 @@ const InsertAnimal = async (registroPar) => {
       )
     ).rowCount;
   } catch (error) {
-    msg = "[mdlAnimais|InsertAnimal] " + error.detail;
+    msg = "[mdlAnimais|InsertAnimal] " + (error.detail || error.message);
     linhasAfetadas = -1;
   }
 
@@ -63,7 +63,7 @@ const UpdateAnimal = async (animalIDPar, registroPar) => {
       )
     ).rowCount;
   } catch (error) {
-    msg = "[mdlAnimais|UpdateAnimal] " + error.detail;
+    msg = "[mdlAnimais|UpdateAnimal] " + (error.detail || error.message);
     linhasAfetadas = -1;
   }
 
@@ -78,13 +78,13 @@ const DeleteAnimal = async (animalIDPar) => {
     //@ Regra de negócio: não deixa remover se houver registros ligados a ele.
     const totalLigados = (
       await db.query(
-        "SELECT count(*) FROM alocado WHERE animalidifk = $1 and removido = false",
+        "SELECT count(*) FROM alocado WHERE animalidifk = $1 and datafinal is null and removido = false",
         [animalIDPar]
       )
     ).rows[0].count;
 
     if (totalLigados > 0) {
-      return { msg: "Este animal possui alocações e não pode ser removido.", linhasAfetadas: 0 };
+      return { msg: "Este animal está alocado em um piquete (alocação em andamento) e não pode ser removido.", linhasAfetadas: 0 };
     }
 
     linhasAfetadas = (
@@ -94,7 +94,7 @@ const DeleteAnimal = async (animalIDPar) => {
       )
     ).rowCount;
   } catch (error) {
-    msg = "[mdlAnimais|DeleteAnimal] " + error.detail;
+    msg = "[mdlAnimais|DeleteAnimal] " + (error.detail || error.message);
     linhasAfetadas = -1;
   }
 

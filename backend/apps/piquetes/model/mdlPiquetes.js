@@ -53,7 +53,7 @@ const InsertPiquete = async (registroPar) => {
       )
     ).rowCount;
   } catch (error) {
-    msg = "[mdlPiquetes|InsertPiquete] " + error.detail;
+    msg = "[mdlPiquetes|InsertPiquete] " + (error.detail || error.message);
     linhasAfetadas = -1;
   }
 
@@ -82,7 +82,7 @@ const UpdatePiquete = async (piqueteIDPar, registroPar) => {
       )
     ).rowCount;
   } catch (error) {
-    msg = "[mdlPiquetes|UpdatePiquete] " + error.detail;
+    msg = "[mdlPiquetes|UpdatePiquete] " + (error.detail || error.message);
     linhasAfetadas = -1;
   }
 
@@ -97,13 +97,13 @@ const DeletePiquete = async (piqueteIDPar) => {
     //@ Regra de negócio: não deixa remover se houver registros ligados a ele.
     const totalLigados = (
       await db.query(
-        "SELECT count(*) FROM alocado WHERE piqueteidfk = $1 and removido = false",
+        "SELECT count(*) FROM alocado WHERE piqueteidfk = $1 and datafinal is null and removido = false",
         [piqueteIDPar]
       )
     ).rows[0].count;
 
     if (totalLigados > 0) {
-      return { msg: "Este piquete possui animais alocados e não pode ser removido.", linhasAfetadas: 0 };
+      return { msg: "Este piquete possui animais alocados (alocação em andamento) e não pode ser removido.", linhasAfetadas: 0 };
     }
 
     linhasAfetadas = (
@@ -113,7 +113,7 @@ const DeletePiquete = async (piqueteIDPar) => {
       )
     ).rowCount;
   } catch (error) {
-    msg = "[mdlPiquetes|DeletePiquete] " + error.detail;
+    msg = "[mdlPiquetes|DeletePiquete] " + (error.detail || error.message);
     linhasAfetadas = -1;
   }
 
