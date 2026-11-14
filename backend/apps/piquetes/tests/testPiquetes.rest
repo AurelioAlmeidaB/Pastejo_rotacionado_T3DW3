@@ -1,0 +1,56 @@
+### Necessário para pegar o token
+# @name loginAutenticado
+POST http://localhost:43000/Login HTTP/1.1
+content-type: application/json
+
+{
+    "UserName": "qwe",
+    "Password": "qwe"
+}
+
+### Seta o token
+@accessToken = {{loginAutenticado.response.body.$.token}}
+
+### teste de buscar todos os registros
+GET http://localhost:43000/getAllPiquetes HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+### teste de buscar por ID
+GET http://localhost:43000/getPiqueteByID/1 HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+### teste de buscar dados para o select
+GET http://localhost:43000/getPastosToPiquetes HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+### teste de inserção
+POST http://localhost:43000/insertPiquete HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "descricao": "Piquete 3",
+    "latitude": -20.4245,
+    "longitude": -49.9801,
+    "pastoidfk": 1
+}
+
+### teste de atualização
+PUT http://localhost:43000/updatePiquete/1 HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "descricao": "Piquete 1 (sombra)",
+    "latitude": -20.4231,
+    "longitude": -49.9781,
+    "pastoidfk": 1
+}
+
+### teste de remoção (soft delete)
+DELETE http://localhost:43000/deletePiquete/1 HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}

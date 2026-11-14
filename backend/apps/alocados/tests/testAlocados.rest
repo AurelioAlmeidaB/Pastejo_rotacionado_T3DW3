@@ -1,0 +1,61 @@
+### Necessário para pegar o token
+# @name loginAutenticado
+POST http://localhost:43000/Login HTTP/1.1
+content-type: application/json
+
+{
+    "UserName": "qwe",
+    "Password": "qwe"
+}
+
+### Seta o token
+@accessToken = {{loginAutenticado.response.body.$.token}}
+
+### teste de buscar todos os registros
+GET http://localhost:43000/getAllAlocados HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+### teste de buscar por ID
+GET http://localhost:43000/getAlocadoByID/1 HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+### teste de buscar dados para o select
+GET http://localhost:43000/getAnimaisToAlocados HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+### teste de buscar dados para o select
+GET http://localhost:43000/getPiquetesToAlocados HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+### teste de inserção
+POST http://localhost:43000/insertAlocado HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "animalidifk": 3,
+    "piqueteidfk": 4,
+    "datainicio": "2026-11-01",
+    "datafinal": null
+}
+
+### teste de atualização
+PUT http://localhost:43000/updateAlocado/1 HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+    "animalidifk": 1,
+    "piqueteidfk": 1,
+    "datainicio": "2026-10-01",
+    "datafinal": "2026-10-16"
+}
+
+### teste de remoção (soft delete)
+DELETE http://localhost:43000/deleteAlocado/1 HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{accessToken}}
