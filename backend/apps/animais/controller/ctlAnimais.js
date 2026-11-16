@@ -1,52 +1,32 @@
-//-- arquivo apps/animais/controller/ctlAnimais.js
-
 const mdlAnimais = require("../model/mdlAnimais");
+const formataData = require("../../../utils/formataData");
 
-// Elimina parte final de uma variável data com essa: 2026-10-01T03:00:00.000Z
-const formataData = (registro) => {
-  for (let i = 0; i < registro.length; i++) {
-    const row = registro[i];
-    if (row.datanasc) {
-      row.datanasc = row.datanasc.toISOString().split('T')[0];
-    }
-  }
-  return registro;
+const CAMPOS_DATA = ["datanasc"];
+
+const GetAllAnimais = async (req, res) => {
+  const registro = await mdlAnimais.GetAllAnimais();
+  res.json({ status: "ok", registro: formataData(registro, CAMPOS_DATA) });
 };
 
-const GetAllAnimais = (req, res) =>
-  (async () => {
-    let registro = await mdlAnimais.GetAllAnimais();
-    res.json({ status: "ok", "registro": formataData(registro) });
-  })();
+const GetAnimalByID = async (req, res) => {
+  const registro = await mdlAnimais.GetAnimalByID(parseInt(req.params.animalid));
+  res.json({ status: "ok", registro: formataData(registro, CAMPOS_DATA) });
+};
 
-const GetAnimalByID = (req, res) =>
-  (async () => {
-    const animalID = parseInt(req.params.animalid);
-    let registro = await mdlAnimais.GetAnimalByID(animalID);
-    res.json({ status: "ok", "registro": formataData(registro) });
-  })();
+const InsertAnimal = async (req, res) => {
+  const { msg, linhasAfetadas } = await mdlAnimais.InsertAnimal(req.body);
+  res.json({ status: msg, linhasAfetadas: linhasAfetadas });
+};
 
-const InsertAnimal = (request, res) =>
-  (async () => {
-    const animalREG = request.body;
-    let { msg, linhasAfetadas } = await mdlAnimais.InsertAnimal(animalREG);
-    res.json({ "status": msg, "linhasAfetadas": linhasAfetadas });
-  })();
+const UpdateAnimal = async (req, res) => {
+  const { msg, linhasAfetadas } = await mdlAnimais.UpdateAnimal(parseInt(req.params.animalid), req.body);
+  res.json({ status: msg, linhasAfetadas: linhasAfetadas });
+};
 
-const UpdateAnimal = (request, res) =>
-  (async () => {
-    const animalID = parseInt(request.params.animalid);
-    const animalREG = request.body;
-    let { msg, linhasAfetadas } = await mdlAnimais.UpdateAnimal(animalID, animalREG);
-    res.json({ "status": msg, "linhasAfetadas": linhasAfetadas });
-  })();
-
-const DeleteAnimal = (request, res) =>
-  (async () => {
-    const animalID = parseInt(request.params.animalid);
-    let { msg, linhasAfetadas } = await mdlAnimais.DeleteAnimal(animalID);
-    res.json({ "status": msg, "linhasAfetadas": linhasAfetadas });
-  })();
+const DeleteAnimal = async (req, res) => {
+  const { msg, linhasAfetadas } = await mdlAnimais.DeleteAnimal(parseInt(req.params.animalid));
+  res.json({ status: msg, linhasAfetadas: linhasAfetadas });
+};
 
 module.exports = {
   GetAllAnimais,

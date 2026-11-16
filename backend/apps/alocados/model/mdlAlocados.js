@@ -1,11 +1,10 @@
-//-- arquivo apps/alocados/model/mdlAlocados.js
-
 const db = require("../../../database/databaseconfig");
+const { idInvalido, dataInvalida } = require("../../../utils/validacao");
 
 const GetAllAlocados = async () => {
   return (
     await db.query(
-      "SELECT al.*, an.nome as animalnome, pi.descricao as piquetedescricao " +
+      "SELECT al.*, an.nome AS animalnome, pi.descricao AS piquetedescricao " +
         "FROM alocado al " +
         "INNER JOIN animal an ON an.animalid = al.animalidifk " +
         "INNER JOIN piquete pi ON pi.piqueteid = al.piqueteidfk " +
@@ -17,32 +16,28 @@ const GetAllAlocados = async () => {
 const GetAlocadoByID = async (alocadoIDPar) => {
   return (
     await db.query(
-      "SELECT al.*, an.nome as animalnome, pi.descricao as piquetedescricao " +
+      "SELECT al.*, an.nome AS animalnome, pi.descricao AS piquetedescricao " +
         "FROM alocado al " +
         "INNER JOIN animal an ON an.animalid = al.animalidifk " +
         "INNER JOIN piquete pi ON pi.piqueteid = al.piqueteidfk " +
-        "WHERE al.alocadoid = $1 and al.removido = false",
+        "WHERE al.alocadoid = $1 AND al.removido = false",
       [alocadoIDPar]
     )
   ).rows;
 };
 
-//@ Animais usados no componente Select do formulário de alocações.
 const GetAnimaisToAlocados = async () => {
   return (
     await db.query(
-      "SELECT animalid, nome " +
-        "FROM animal " +
-        "WHERE removido = false ORDER BY nome ASC"
+      "SELECT animalid, nome FROM animal WHERE removido = false ORDER BY nome ASC"
     )
   ).rows;
 };
 
-//@ Piquetes usados no componente Select do formulário de alocações.
 const GetPiquetesToAlocados = async () => {
   return (
     await db.query(
-      "SELECT pi.piqueteid, pi.descricao, pa.descricao as pastodescricao " +
+      "SELECT pi.piqueteid, pi.descricao, pa.descricao AS pastodescricao " +
         "FROM piquete pi " +
         "INNER JOIN pasto pa ON pa.pastoid = pi.pastoidfk " +
         "WHERE pi.removido = false ORDER BY pi.descricao ASC"
@@ -50,25 +45,38 @@ const GetPiquetesToAlocados = async () => {
   ).rows;
 };
 
-//@ Regras de negócio da alocação. Retorna a mensagem de erro ou null se estiver tudo certo.
-//@ alocadoIDPar é 0 no insert e o ID do registro no update (para não comparar a alocação com ela mesma).
 const ValidaAlocado = async (alocadoIDPar, registroPar) => {
+  if (idInvalido(registroPar.animalidifk)) {
+    return "Selecione o animal.";
+  }
+
+  if (idInvalido(registroPar.piqueteidfk)) {
+    return "Selecione o piquete.";
+  }
+
+  if (dataInvalida(registroPar.datainicio)) {
+    return "Informe a data de início.";
+  }
+
+  if (registroPar.datafinal && dataInvalida(registroPar.datafinal)) {
+    return "A data final é inválida.";
+  }
+
   if (registroPar.datafinal && registroPar.datafinal < registroPar.datainicio) {
     return "A data final não pode ser menor que a data de início.";
   }
 
-  //@ Um animal não pode estar em dois piquetes ao mesmo tempo (períodos que se sobrepõem).
-  const conflito = (
+  const totalConflitos = (
     await db.query(
       "SELECT count(*) FROM alocado " +
-        "WHERE animalidifk = $1 and alocadoid <> $2 and removido = false " +
-        "and (datafinal is null or datafinal >= $3) " +
-        "and ($4::date is null or datainicio <= $4::date)",
-      [registroPar.animalidifk, alocadoIDPar, registroPar.datainicio, registroPar.datafinal]
+        "WHERE animalidifk = $1 AND alocadoid <> $2 AND removido = false " +
+        "AND (datafinal IS NULL OR datafinal >= $3) " +
+        "AND ($4::date IS NULL OR datainicio <= $4::date)",
+      [registroPar.animalidifk, alocadoIDPar, registroPar.datainicio, registroPar.datafinal || null]
     )
   ).rows[0].count;
 
-  if (conflito > 0) {
+  if (Number(totalConflitos) > 0) {
     return "Este animal já está alocado em outro piquete nesse período.";
   }
 
@@ -76,23 +84,24 @@ const ValidaAlocado = async (alocadoIDPar, registroPar) => {
 };
 
 const InsertAlocado = async (registroPar) => {
-  //@ Atenção: aqui utilizamos a variável msg para retornar erros de banco de dados.
   let linhasAfetadas;
   let msg = "ok";
+
   try {
     const erro = await ValidaAlocado(0, registroPar);
+
     if (erro) {
       return { msg: erro, linhasAfetadas: 0 };
     }
 
     linhasAfetadas = (
       await db.query(
-        "INSERT INTO alocado " + "values(default, $1, $2, $3, $4, false)",
+        "INSERT INTO alocado VALUES (default, $1, $2, $3, $4, false)",
         [
           registroPar.animalidifk,
           registroPar.piqueteidfk,
           registroPar.datainicio,
-          registroPar.datafinal,
+          registroPar.datafinal || null,
         ]
       )
     ).rowCount;
@@ -107,26 +116,24 @@ const InsertAlocado = async (registroPar) => {
 const UpdateAlocado = async (alocadoIDPar, registroPar) => {
   let linhasAfetadas;
   let msg = "ok";
+
   try {
     const erro = await ValidaAlocado(alocadoIDPar, registroPar);
+
     if (erro) {
       return { msg: erro, linhasAfetadas: 0 };
     }
 
     linhasAfetadas = (
       await db.query(
-        "UPDATE alocado SET " +
-          "animalidifk = $2, " +
-          "piqueteidfk = $3, " +
-          "datainicio = $4, " +
-          "datafinal = $5 " +
-          "WHERE alocadoid = $1 and removido = false",
+        "UPDATE alocado SET animalidifk = $2, piqueteidfk = $3, datainicio = $4, datafinal = $5 " +
+          "WHERE alocadoid = $1 AND removido = false",
         [
           alocadoIDPar,
           registroPar.animalidifk,
           registroPar.piqueteidfk,
           registroPar.datainicio,
-          registroPar.datafinal,
+          registroPar.datafinal || null,
         ]
       )
     ).rowCount;
@@ -145,7 +152,7 @@ const DeleteAlocado = async (alocadoIDPar) => {
   try {
     linhasAfetadas = (
       await db.query(
-        "UPDATE alocado SET " + "removido = true " + "WHERE alocadoid = $1 and removido = false",
+        "UPDATE alocado SET removido = true WHERE alocadoid = $1 AND removido = false",
         [alocadoIDPar]
       )
     ).rowCount;

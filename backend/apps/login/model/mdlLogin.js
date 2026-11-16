@@ -1,13 +1,10 @@
-//-- apps/login/model/mdlLogin.js
-
 const db = require("../../../database/databaseconfig");
 
-const GetCredencial = async (loginPar) => {
+const GetCredencial = async (usernamePar) => {
   return (
     await db.query(
-      "select username, password " +
-        "from usuarios where username = $1 and removido = false",
-      [loginPar]
+      "SELECT username, password FROM usuarios WHERE username = $1 AND removido = false",
+      [usernamePar]
     )
   ).rows;
 };

@@ -1,4 +1,3 @@
-### Necessário para pegar o token
 # @name loginAutenticado
 POST http://localhost:43000/Login HTTP/1.1
 content-type: application/json
@@ -8,20 +7,20 @@ content-type: application/json
     "Password": "qwe"
 }
 
-### Seta o token
+###
 @accessToken = {{loginAutenticado.response.body.$.token}}
 
-### teste de buscar todos os registros
+###
 GET http://localhost:43000/getAllPastos HTTP/1.1
 content-type: application/json
 Authorization: Bearer {{accessToken}}
 
-### teste de buscar por ID
+###
 GET http://localhost:43000/getPastoByID/1 HTTP/1.1
 content-type: application/json
 Authorization: Bearer {{accessToken}}
 
-### teste de inserção
+###
 POST http://localhost:43000/insertPasto HTTP/1.1
 content-type: application/json
 Authorization: Bearer {{accessToken}}
@@ -31,17 +30,17 @@ Authorization: Bearer {{accessToken}}
     "areatotal": 18.75
 }
 
-### teste de atualização
+###
 PUT http://localhost:43000/updatePasto/1 HTTP/1.1
 content-type: application/json
 Authorization: Bearer {{accessToken}}
 
 {
-    "descricao": "Pasto da Sede (reformado)",
+    "descricao": "Pasto da Sede",
     "areatotal": 26.0
 }
 
-### teste de remoção (soft delete)
+###
 DELETE http://localhost:43000/deletePasto/1 HTTP/1.1
 content-type: application/json
 Authorization: Bearer {{accessToken}}

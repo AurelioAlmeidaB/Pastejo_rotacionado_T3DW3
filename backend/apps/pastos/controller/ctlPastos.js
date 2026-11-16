@@ -1,41 +1,29 @@
-//-- arquivo apps/pastos/controller/ctlPastos.js
-
 const mdlPastos = require("../model/mdlPastos");
 
-const GetAllPastos = (req, res) =>
-  (async () => {
-    let registro = await mdlPastos.GetAllPastos();
-    res.json({ status: "ok", "registro": registro });
-  })();
+const GetAllPastos = async (req, res) => {
+  const registro = await mdlPastos.GetAllPastos();
+  res.json({ status: "ok", registro: registro });
+};
 
-const GetPastoByID = (req, res) =>
-  (async () => {
-    const pastoID = parseInt(req.params.pastoid);
-    let registro = await mdlPastos.GetPastoByID(pastoID);
-    res.json({ status: "ok", "registro": registro });
-  })();
+const GetPastoByID = async (req, res) => {
+  const registro = await mdlPastos.GetPastoByID(parseInt(req.params.pastoid));
+  res.json({ status: "ok", registro: registro });
+};
 
-const InsertPasto = (request, res) =>
-  (async () => {
-    const pastoREG = request.body;
-    let { msg, linhasAfetadas } = await mdlPastos.InsertPasto(pastoREG);
-    res.json({ "status": msg, "linhasAfetadas": linhasAfetadas });
-  })();
+const InsertPasto = async (req, res) => {
+  const { msg, linhasAfetadas } = await mdlPastos.InsertPasto(req.body);
+  res.json({ status: msg, linhasAfetadas: linhasAfetadas });
+};
 
-const UpdatePasto = (request, res) =>
-  (async () => {
-    const pastoID = parseInt(request.params.pastoid);
-    const pastoREG = request.body;
-    let { msg, linhasAfetadas } = await mdlPastos.UpdatePasto(pastoID, pastoREG);
-    res.json({ "status": msg, "linhasAfetadas": linhasAfetadas });
-  })();
+const UpdatePasto = async (req, res) => {
+  const { msg, linhasAfetadas } = await mdlPastos.UpdatePasto(parseInt(req.params.pastoid), req.body);
+  res.json({ status: msg, linhasAfetadas: linhasAfetadas });
+};
 
-const DeletePasto = (request, res) =>
-  (async () => {
-    const pastoID = parseInt(request.params.pastoid);
-    let { msg, linhasAfetadas } = await mdlPastos.DeletePasto(pastoID);
-    res.json({ "status": msg, "linhasAfetadas": linhasAfetadas });
-  })();
+const DeletePasto = async (req, res) => {
+  const { msg, linhasAfetadas } = await mdlPastos.DeletePasto(parseInt(req.params.pastoid));
+  res.json({ status: msg, linhasAfetadas: linhasAfetadas });
+};
 
 module.exports = {
   GetAllPastos,

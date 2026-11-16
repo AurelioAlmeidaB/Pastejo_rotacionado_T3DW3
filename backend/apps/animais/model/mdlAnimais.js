@@ -1,13 +1,10 @@
-//-- arquivo apps/animais/model/mdlAnimais.js
-
 const db = require("../../../database/databaseconfig");
+const { textoVazio, dataInvalida, dataDeHoje } = require("../../../utils/validacao");
 
 const GetAllAnimais = async () => {
   return (
     await db.query(
-      "SELECT * " +
-        "FROM animal " +
-        "WHERE removido = false ORDER BY nome ASC"
+      "SELECT * FROM animal WHERE removido = false ORDER BY nome ASC"
     )
   ).rows;
 };
@@ -15,26 +12,43 @@ const GetAllAnimais = async () => {
 const GetAnimalByID = async (animalIDPar) => {
   return (
     await db.query(
-      "SELECT * " +
-        "FROM animal " +
-        "WHERE animalid = $1 and removido = false",
+      "SELECT * FROM animal WHERE animalid = $1 AND removido = false",
       [animalIDPar]
     )
   ).rows;
 };
 
+const ValidaAnimal = (registroPar) => {
+  if (textoVazio(registroPar.nome)) {
+    return "Informe o nome do animal.";
+  }
+
+  if (dataInvalida(registroPar.datanasc)) {
+    return "Informe a data de nascimento do animal.";
+  }
+
+  if (registroPar.datanasc > dataDeHoje()) {
+    return "A data de nascimento não pode ser uma data futura.";
+  }
+
+  return null;
+};
+
 const InsertAnimal = async (registroPar) => {
-  //@ Atenção: aqui utilizamos a variável msg para retornar erros de banco de dados.
   let linhasAfetadas;
   let msg = "ok";
+
   try {
+    const erro = ValidaAnimal(registroPar);
+
+    if (erro) {
+      return { msg: erro, linhasAfetadas: 0 };
+    }
+
     linhasAfetadas = (
       await db.query(
-        "INSERT INTO animal " + "values(default, $1, $2, false)",
-        [
-          registroPar.nome,
-          registroPar.datanasc,
-        ]
+        "INSERT INTO animal VALUES (default, $1, $2, false)",
+        [registroPar.nome.trim(), registroPar.datanasc]
       )
     ).rowCount;
   } catch (error) {
@@ -48,18 +62,19 @@ const InsertAnimal = async (registroPar) => {
 const UpdateAnimal = async (animalIDPar, registroPar) => {
   let linhasAfetadas;
   let msg = "ok";
+
   try {
+    const erro = ValidaAnimal(registroPar);
+
+    if (erro) {
+      return { msg: erro, linhasAfetadas: 0 };
+    }
+
     linhasAfetadas = (
       await db.query(
-        "UPDATE animal SET " +
-          "nome = $2, " +
-          "datanasc = $3 " +
-          "WHERE animalid = $1 and removido = false",
-        [
-          animalIDPar,
-          registroPar.nome,
-          registroPar.datanasc,
-        ]
+        "UPDATE animal SET nome = $2, datanasc = $3 " +
+          "WHERE animalid = $1 AND removido = false",
+        [animalIDPar, registroPar.nome.trim(), registroPar.datanasc]
       )
     ).rowCount;
   } catch (error) {
@@ -75,21 +90,24 @@ const DeleteAnimal = async (animalIDPar) => {
   let msg = "ok";
 
   try {
-    //@ Regra de negócio: não deixa remover se houver registros ligados a ele.
-    const totalLigados = (
+    const totalAlocados = (
       await db.query(
-        "SELECT count(*) FROM alocado WHERE animalidifk = $1 and datafinal is null and removido = false",
+        "SELECT count(*) FROM alocado " +
+          "WHERE animalidifk = $1 AND datafinal IS NULL AND removido = false",
         [animalIDPar]
       )
     ).rows[0].count;
 
-    if (totalLigados > 0) {
-      return { msg: "Este animal está alocado em um piquete (alocação em andamento) e não pode ser removido.", linhasAfetadas: 0 };
+    if (Number(totalAlocados) > 0) {
+      return {
+        msg: "Este animal está alocado em um piquete (alocação em andamento) e não pode ser removido.",
+        linhasAfetadas: 0,
+      };
     }
 
     linhasAfetadas = (
       await db.query(
-        "UPDATE animal SET " + "removido = true " + "WHERE animalid = $1 and removido = false",
+        "UPDATE animal SET removido = true WHERE animalid = $1 AND removido = false",
         [animalIDPar]
       )
     ).rowCount;

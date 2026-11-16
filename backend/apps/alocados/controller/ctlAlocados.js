@@ -1,67 +1,42 @@
-//-- arquivo apps/alocados/controller/ctlAlocados.js
-
 const mdlAlocados = require("../model/mdlAlocados");
+const formataData = require("../../../utils/formataData");
 
-// Elimina parte final de uma variável data com essa: 2026-10-01T03:00:00.000Z
-const formataData = (registro) => {
-  for (let i = 0; i < registro.length; i++) {
-    const row = registro[i];
-    if (row.datainicio) {
-      row.datainicio = row.datainicio.toISOString().split('T')[0];
-    }
-    if (row.datafinal) {
-      row.datafinal = row.datafinal.toISOString().split('T')[0];
-    }
-  }
-  return registro;
+const CAMPOS_DATA = ["datainicio", "datafinal"];
+
+const GetAllAlocados = async (req, res) => {
+  const registro = await mdlAlocados.GetAllAlocados();
+  res.json({ status: "ok", registro: formataData(registro, CAMPOS_DATA) });
 };
 
-const GetAllAlocados = (req, res) =>
-  (async () => {
-    let registro = await mdlAlocados.GetAllAlocados();
-    res.json({ status: "ok", "registro": formataData(registro) });
-  })();
+const GetAlocadoByID = async (req, res) => {
+  const registro = await mdlAlocados.GetAlocadoByID(parseInt(req.params.alocadoid));
+  res.json({ status: "ok", registro: formataData(registro, CAMPOS_DATA) });
+};
 
-const GetAlocadoByID = (req, res) =>
-  (async () => {
-    const alocadoID = parseInt(req.params.alocadoid);
-    let registro = await mdlAlocados.GetAlocadoByID(alocadoID);
-    res.json({ status: "ok", "registro": formataData(registro) });
-  })();
+const GetAnimaisToAlocados = async (req, res) => {
+  const registro = await mdlAlocados.GetAnimaisToAlocados();
+  res.json({ status: "ok", registro: registro });
+};
 
-const GetAnimaisToAlocados = (req, res) =>
-  (async () => {
-    let registro = await mdlAlocados.GetAnimaisToAlocados();
-    res.json({ status: "ok", "registro": registro });
-  })();
+const GetPiquetesToAlocados = async (req, res) => {
+  const registro = await mdlAlocados.GetPiquetesToAlocados();
+  res.json({ status: "ok", registro: registro });
+};
 
-const GetPiquetesToAlocados = (req, res) =>
-  (async () => {
-    let registro = await mdlAlocados.GetPiquetesToAlocados();
-    res.json({ status: "ok", "registro": registro });
-  })();
+const InsertAlocado = async (req, res) => {
+  const { msg, linhasAfetadas } = await mdlAlocados.InsertAlocado(req.body);
+  res.json({ status: msg, linhasAfetadas: linhasAfetadas });
+};
 
-const InsertAlocado = (request, res) =>
-  (async () => {
-    const alocadoREG = request.body;
-    let { msg, linhasAfetadas } = await mdlAlocados.InsertAlocado(alocadoREG);
-    res.json({ "status": msg, "linhasAfetadas": linhasAfetadas });
-  })();
+const UpdateAlocado = async (req, res) => {
+  const { msg, linhasAfetadas } = await mdlAlocados.UpdateAlocado(parseInt(req.params.alocadoid), req.body);
+  res.json({ status: msg, linhasAfetadas: linhasAfetadas });
+};
 
-const UpdateAlocado = (request, res) =>
-  (async () => {
-    const alocadoID = parseInt(request.params.alocadoid);
-    const alocadoREG = request.body;
-    let { msg, linhasAfetadas } = await mdlAlocados.UpdateAlocado(alocadoID, alocadoREG);
-    res.json({ "status": msg, "linhasAfetadas": linhasAfetadas });
-  })();
-
-const DeleteAlocado = (request, res) =>
-  (async () => {
-    const alocadoID = parseInt(request.params.alocadoid);
-    let { msg, linhasAfetadas } = await mdlAlocados.DeleteAlocado(alocadoID);
-    res.json({ "status": msg, "linhasAfetadas": linhasAfetadas });
-  })();
+const DeleteAlocado = async (req, res) => {
+  const { msg, linhasAfetadas } = await mdlAlocados.DeleteAlocado(parseInt(req.params.alocadoid));
+  res.json({ status: msg, linhasAfetadas: linhasAfetadas });
+};
 
 module.exports = {
   GetAllAlocados,
