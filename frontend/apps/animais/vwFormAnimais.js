@@ -1,27 +1,18 @@
-// Arquivo: apps/animais/vwFormAnimais.js
-
 document.addEventListener('DOMContentLoaded', async function() {
   if (!dw3IsLogged()) {
     return;
   }
 
-  var form = document.getElementById('frmAnimais');
+  const oper = dw3ObterOperacao();
+  const btnInserir = document.getElementById('btnInserirAnimal');
+  const btnAtualizar = document.getElementById('btnAtualizarAnimal');
+  const btnRemover = document.getElementById('btnRemoverAnimal');
 
-  if (!form) {
-    return;
-  }
-
-  // oper vem da url: Cr (criar), Re (visualizar), Up (atualizar) e De (remover)
-  var oper = new URLSearchParams(window.location.search).get('oper') || 'Cr';
-  var btnInserir = document.getElementById('btnInserirAnimal');
-  var btnAtualizar = document.getElementById('btnAtualizarAnimal');
-  var btnRemover = document.getElementById('btnRemoverAnimal');
+  document.getElementById('datanasc').max = dw3DataDeHoje();
 
   if (oper === 'Cr') {
     btnInserir.classList.remove('d-none');
-    btnInserir.addEventListener('click', function() {
-      vwInsertAnimal();
-    });
+    btnInserir.addEventListener('click', vwInsertAnimal);
   }
 
   if (oper === 'Re') {
@@ -32,9 +23,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   if (oper === 'Up') {
     btnAtualizar.classList.remove('d-none');
     btnAtualizar.disabled = true;
-    btnAtualizar.addEventListener('click', function() {
-      vwUpdateAnimal();
-    });
+    btnAtualizar.addEventListener('click', vwUpdateAnimal);
     btnAtualizar.disabled = !(await vwGetAnimalByID());
   }
 
@@ -42,12 +31,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     bloquearCamposAnimal();
     btnRemover.classList.remove('d-none');
     btnRemover.disabled = true;
-    btnRemover.addEventListener('click', function() {
-      vwDeleteAnimal();
-    });
+    btnRemover.addEventListener('click', vwDeleteAnimal);
     btnRemover.disabled = !(await vwGetAnimalByID());
   }
 });
+
+function obterServidor() {
+  return document.getElementById('frmAnimais').dataset.servidorDw3;
+}
 
 function bloquearCamposAnimal() {
   document.getElementById('nome').readOnly = true;
@@ -56,59 +47,16 @@ function bloquearCamposAnimal() {
 
 function montarAnimalDoFormulario() {
   return {
-    nome: document.getElementById('nome').value,
+    nome: document.getElementById('nome').value.trim(),
     datanasc: document.getElementById('datanasc').value
   };
 }
 
-function obterAnimalIdDaUrl() {
-  var id = new URLSearchParams(window.location.search).get('animalId');
-
-  if (!id || !/^\d+$/.test(id) || Number(id) <= 0) {
-    throw new Error('ID do animal inválido.');
-  }
-
-  return id;
-}
-
-// Faz a requisição ao backend e trata as respostas de erro padrão do sistema.
-async function enviarRequisicaoAnimal(caminho, opcoes, mensagemErro) {
-  var servidorDw3 = document.getElementById('frmAnimais').dataset.servidorDw3;
-
-  if (!servidorDw3) {
-    throw new Error('Endereço do servidor backend não configurado.');
-  }
-
-  var response = await fetch(servidorDw3 + caminho, opcoes);
-
-  if (!response.ok) {
-    throw new Error(mensagemErro);
-  }
-
-  var data = await response.json();
-
-  if (data.auth === false) {
-    dw3SessaoExpirada(); // JWT expirado: volta para a tela de login.
-    // Promise que nunca termina: interrompe a operação sem mostrar outro alerta de erro.
-    return new Promise(function() {});
-  }
-
-  if (data.status !== 'ok') {
-    throw new Error(data.status || mensagemErro);
-  }
-
-  return data;
-}
-
-// Retorna true quando o animal foi carregado no formulário.
 async function vwGetAnimalByID() {
   try {
-    var id = obterAnimalIdDaUrl();
-    var data = await enviarRequisicaoAnimal('/getAnimalByID/' + encodeURIComponent(id), {
-      headers: dw3MontarHeadersAutenticacao()
-    }, 'Não foi possível carregar o animal.');
-
-    var registro = Array.isArray(data.registro) ? data.registro[0] : null;
+    const id = dw3ObterIdDaUrl('animalId');
+    const data = await dw3Requisicao(obterServidor(), '/getAnimalByID/' + id, {}, 'Não foi possível carregar o animal.');
+    const registro = data.registro[0];
 
     if (!registro) {
       throw new Error('Animal não encontrado.');
@@ -117,53 +65,50 @@ async function vwGetAnimalByID() {
     document.getElementById('animalid').value = registro.animalid;
     document.getElementById('nome').value = registro.nome ?? '';
     document.getElementById('datanasc').value = registro.datanasc ?? '';
+
     return true;
   } catch (error) {
-    alert(error.message || 'Erro ao carregar animal.');
+    alert(error.message);
     return false;
   }
 }
 
 async function vwInsertAnimal() {
-  var form = document.getElementById('frmAnimais');
-  var btnInserir = document.getElementById('btnInserirAnimal');
+  const btnInserir = document.getElementById('btnInserirAnimal');
 
-  if (!form.reportValidity()) {
+  if (!document.getElementById('frmAnimais').reportValidity()) {
     return;
   }
 
   try {
     btnInserir.disabled = true;
 
-    await enviarRequisicaoAnimal('/insertAnimal', {
+    await dw3Requisicao(obterServidor(), '/insertAnimal', {
       method: 'POST',
-      headers: dw3MontarHeadersAutenticacao({ 'content-type': 'application/json' }),
       body: JSON.stringify(montarAnimalDoFormulario())
     }, 'Não foi possível inserir o animal.');
 
     window.location.href = '/animais';
   } catch (error) {
-    alert(error.message || 'Erro ao inserir animal.');
+    alert(error.message);
   } finally {
     btnInserir.disabled = false;
   }
 }
 
 async function vwUpdateAnimal() {
-  var form = document.getElementById('frmAnimais');
-  var btnAtualizar = document.getElementById('btnAtualizarAnimal');
+  const btnAtualizar = document.getElementById('btnAtualizarAnimal');
 
-  if (btnAtualizar.disabled || !form.reportValidity()) {
+  if (btnAtualizar.disabled || !document.getElementById('frmAnimais').reportValidity()) {
     return;
   }
 
   try {
-    var id = obterAnimalIdDaUrl();
     btnAtualizar.disabled = true;
 
-    var data = await enviarRequisicaoAnimal('/updateAnimal/' + encodeURIComponent(id), {
+    const id = dw3ObterIdDaUrl('animalId');
+    const data = await dw3Requisicao(obterServidor(), '/updateAnimal/' + id, {
       method: 'PUT',
-      headers: dw3MontarHeadersAutenticacao({ 'content-type': 'application/json' }),
       body: JSON.stringify(montarAnimalDoFormulario())
     }, 'Não foi possível atualizar o animal.');
 
@@ -174,26 +119,25 @@ async function vwUpdateAnimal() {
     alert('Animal atualizado com sucesso.');
     window.location.href = '/animais';
   } catch (error) {
-    alert(error.message || 'Erro ao atualizar animal.');
+    alert(error.message);
   } finally {
     btnAtualizar.disabled = false;
   }
 }
 
 async function vwDeleteAnimal() {
-  var btnRemover = document.getElementById('btnRemoverAnimal');
+  const btnRemover = document.getElementById('btnRemoverAnimal');
 
   if (btnRemover.disabled || !window.confirm('Confirma a remoção deste animal?')) {
     return;
   }
 
   try {
-    var id = obterAnimalIdDaUrl();
     btnRemover.disabled = true;
 
-    var data = await enviarRequisicaoAnimal('/deleteAnimal/' + encodeURIComponent(id), {
-      method: 'DELETE',
-      headers: dw3MontarHeadersAutenticacao()
+    const id = dw3ObterIdDaUrl('animalId');
+    const data = await dw3Requisicao(obterServidor(), '/deleteAnimal/' + id, {
+      method: 'DELETE'
     }, 'Não foi possível remover o animal.');
 
     if (data.linhasAfetadas !== 1) {
@@ -202,7 +146,7 @@ async function vwDeleteAnimal() {
 
     window.location.href = '/animais';
   } catch (error) {
-    alert(error.message || 'Erro ao remover animal.');
+    alert(error.message);
   } finally {
     btnRemover.disabled = false;
   }

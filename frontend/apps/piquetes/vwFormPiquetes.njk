@@ -1,5 +1,3 @@
-<!-- Arquivo: ./apps/piquetes/vwFormPiquetes.njk -->
-
 {% extends "layout.njk" %}
 
 {% block content %}
@@ -26,7 +24,7 @@
         <div class="row g-3">
           <div class="col-12 col-md-6">
             <label for="descricao" class="form-label">Descrição</label>
-            <input type="text" class="form-control" id="descricao" name="descricao" value="" maxlength="60" required>
+            <input type="text" class="form-control" id="descricao" name="descricao" value="" maxlength="60" required pattern=".*\S.*" title="Preencha este campo.">
           </div>
 
           <div class="col-12 col-md-6">
@@ -65,8 +63,8 @@
     </div>
   </div>
 
-  <script src="/js/dw3frontend.js"></script>
   <script src="https://code.jquery.com/jquery-4.0.0.slim.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="/js/dw3frontend.js"></script>
   <script src="/apps/piquetes/vwFormPiquetes.js"></script>
 {% endblock %}

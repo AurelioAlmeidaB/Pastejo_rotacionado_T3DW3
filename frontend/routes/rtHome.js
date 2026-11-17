@@ -1,14 +1,11 @@
-// arquivo: routes/rtHome.js
+const express = require('express');
+const router = express.Router();
 
-var express = require('express');
-var router = express.Router();
-
-router.get('/', function(req, res) {
+router.get('/', (req, res) => {
   res.render('home', {
     title: 'Painel Principal',
     showNavbar: true,
-    activeMenu: 'home',
-    servidorDw3: process.env.SERVIDOR_DW3
+    activeMenu: 'home'
   });
 });
 

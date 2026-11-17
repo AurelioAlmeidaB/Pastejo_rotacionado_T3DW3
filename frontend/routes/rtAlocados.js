@@ -1,18 +1,16 @@
-// Arquivo: ./routes/rtAlocados.js
+const express = require('express');
+const router = express.Router();
 
-var express = require('express');
-var router = express.Router();
-
-router.get('/', function(req, res) {
+router.get('/', (req, res) => {
   res.render('alocados/vwLstAlocados', {
     title: 'Alocações',
     showNavbar: true,
     activeMenu: 'alocados',
-    servidorDw3: process.env.SERVIDOR_DW3 // É necessário, pois o front em html não tem acesso ao arquivo .env
+    servidorDw3: process.env.SERVIDOR_DW3
   });
 });
 
-router.get('/form', function(req, res) {
+router.get('/form', (req, res) => {
   res.render('alocados/vwFormAlocados', {
     title: 'Formulário de alocações',
     showNavbar: true,

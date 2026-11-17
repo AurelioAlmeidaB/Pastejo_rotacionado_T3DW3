@@ -1,27 +1,16 @@
-// Arquivo: apps/pastos/vwFormPastos.js
-
 document.addEventListener('DOMContentLoaded', async function() {
   if (!dw3IsLogged()) {
     return;
   }
 
-  var form = document.getElementById('frmPastos');
-
-  if (!form) {
-    return;
-  }
-
-  // oper vem da url: Cr (criar), Re (visualizar), Up (atualizar) e De (remover)
-  var oper = new URLSearchParams(window.location.search).get('oper') || 'Cr';
-  var btnInserir = document.getElementById('btnInserirPasto');
-  var btnAtualizar = document.getElementById('btnAtualizarPasto');
-  var btnRemover = document.getElementById('btnRemoverPasto');
+  const oper = dw3ObterOperacao();
+  const btnInserir = document.getElementById('btnInserirPasto');
+  const btnAtualizar = document.getElementById('btnAtualizarPasto');
+  const btnRemover = document.getElementById('btnRemoverPasto');
 
   if (oper === 'Cr') {
     btnInserir.classList.remove('d-none');
-    btnInserir.addEventListener('click', function() {
-      vwInsertPasto();
-    });
+    btnInserir.addEventListener('click', vwInsertPasto);
   }
 
   if (oper === 'Re') {
@@ -32,9 +21,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   if (oper === 'Up') {
     btnAtualizar.classList.remove('d-none');
     btnAtualizar.disabled = true;
-    btnAtualizar.addEventListener('click', function() {
-      vwUpdatePasto();
-    });
+    btnAtualizar.addEventListener('click', vwUpdatePasto);
     btnAtualizar.disabled = !(await vwGetPastoByID());
   }
 
@@ -42,12 +29,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     bloquearCamposPasto();
     btnRemover.classList.remove('d-none');
     btnRemover.disabled = true;
-    btnRemover.addEventListener('click', function() {
-      vwDeletePasto();
-    });
+    btnRemover.addEventListener('click', vwDeletePasto);
     btnRemover.disabled = !(await vwGetPastoByID());
   }
 });
+
+function obterServidor() {
+  return document.getElementById('frmPastos').dataset.servidorDw3;
+}
 
 function bloquearCamposPasto() {
   document.getElementById('descricao').readOnly = true;
@@ -56,59 +45,16 @@ function bloquearCamposPasto() {
 
 function montarPastoDoFormulario() {
   return {
-    descricao: document.getElementById('descricao').value,
+    descricao: document.getElementById('descricao').value.trim(),
     areatotal: Number(document.getElementById('areatotal').value)
   };
 }
 
-function obterPastoIdDaUrl() {
-  var id = new URLSearchParams(window.location.search).get('pastoId');
-
-  if (!id || !/^\d+$/.test(id) || Number(id) <= 0) {
-    throw new Error('ID do pasto inválido.');
-  }
-
-  return id;
-}
-
-// Faz a requisição ao backend e trata as respostas de erro padrão do sistema.
-async function enviarRequisicaoPasto(caminho, opcoes, mensagemErro) {
-  var servidorDw3 = document.getElementById('frmPastos').dataset.servidorDw3;
-
-  if (!servidorDw3) {
-    throw new Error('Endereço do servidor backend não configurado.');
-  }
-
-  var response = await fetch(servidorDw3 + caminho, opcoes);
-
-  if (!response.ok) {
-    throw new Error(mensagemErro);
-  }
-
-  var data = await response.json();
-
-  if (data.auth === false) {
-    dw3SessaoExpirada(); // JWT expirado: volta para a tela de login.
-    // Promise que nunca termina: interrompe a operação sem mostrar outro alerta de erro.
-    return new Promise(function() {});
-  }
-
-  if (data.status !== 'ok') {
-    throw new Error(data.status || mensagemErro);
-  }
-
-  return data;
-}
-
-// Retorna true quando o pasto foi carregado no formulário.
 async function vwGetPastoByID() {
   try {
-    var id = obterPastoIdDaUrl();
-    var data = await enviarRequisicaoPasto('/getPastoByID/' + encodeURIComponent(id), {
-      headers: dw3MontarHeadersAutenticacao()
-    }, 'Não foi possível carregar o pasto.');
-
-    var registro = Array.isArray(data.registro) ? data.registro[0] : null;
+    const id = dw3ObterIdDaUrl('pastoId');
+    const data = await dw3Requisicao(obterServidor(), '/getPastoByID/' + id, {}, 'Não foi possível carregar o pasto.');
+    const registro = data.registro[0];
 
     if (!registro) {
       throw new Error('Pasto não encontrado.');
@@ -117,53 +63,50 @@ async function vwGetPastoByID() {
     document.getElementById('pastoid').value = registro.pastoid;
     document.getElementById('descricao').value = registro.descricao ?? '';
     document.getElementById('areatotal').value = registro.areatotal ?? '';
+
     return true;
   } catch (error) {
-    alert(error.message || 'Erro ao carregar pasto.');
+    alert(error.message);
     return false;
   }
 }
 
 async function vwInsertPasto() {
-  var form = document.getElementById('frmPastos');
-  var btnInserir = document.getElementById('btnInserirPasto');
+  const btnInserir = document.getElementById('btnInserirPasto');
 
-  if (!form.reportValidity()) {
+  if (!document.getElementById('frmPastos').reportValidity()) {
     return;
   }
 
   try {
     btnInserir.disabled = true;
 
-    await enviarRequisicaoPasto('/insertPasto', {
+    await dw3Requisicao(obterServidor(), '/insertPasto', {
       method: 'POST',
-      headers: dw3MontarHeadersAutenticacao({ 'content-type': 'application/json' }),
       body: JSON.stringify(montarPastoDoFormulario())
     }, 'Não foi possível inserir o pasto.');
 
     window.location.href = '/pastos';
   } catch (error) {
-    alert(error.message || 'Erro ao inserir pasto.');
+    alert(error.message);
   } finally {
     btnInserir.disabled = false;
   }
 }
 
 async function vwUpdatePasto() {
-  var form = document.getElementById('frmPastos');
-  var btnAtualizar = document.getElementById('btnAtualizarPasto');
+  const btnAtualizar = document.getElementById('btnAtualizarPasto');
 
-  if (btnAtualizar.disabled || !form.reportValidity()) {
+  if (btnAtualizar.disabled || !document.getElementById('frmPastos').reportValidity()) {
     return;
   }
 
   try {
-    var id = obterPastoIdDaUrl();
     btnAtualizar.disabled = true;
 
-    var data = await enviarRequisicaoPasto('/updatePasto/' + encodeURIComponent(id), {
+    const id = dw3ObterIdDaUrl('pastoId');
+    const data = await dw3Requisicao(obterServidor(), '/updatePasto/' + id, {
       method: 'PUT',
-      headers: dw3MontarHeadersAutenticacao({ 'content-type': 'application/json' }),
       body: JSON.stringify(montarPastoDoFormulario())
     }, 'Não foi possível atualizar o pasto.');
 
@@ -174,26 +117,25 @@ async function vwUpdatePasto() {
     alert('Pasto atualizado com sucesso.');
     window.location.href = '/pastos';
   } catch (error) {
-    alert(error.message || 'Erro ao atualizar pasto.');
+    alert(error.message);
   } finally {
     btnAtualizar.disabled = false;
   }
 }
 
 async function vwDeletePasto() {
-  var btnRemover = document.getElementById('btnRemoverPasto');
+  const btnRemover = document.getElementById('btnRemoverPasto');
 
   if (btnRemover.disabled || !window.confirm('Confirma a remoção deste pasto?')) {
     return;
   }
 
   try {
-    var id = obterPastoIdDaUrl();
     btnRemover.disabled = true;
 
-    var data = await enviarRequisicaoPasto('/deletePasto/' + encodeURIComponent(id), {
-      method: 'DELETE',
-      headers: dw3MontarHeadersAutenticacao()
+    const id = dw3ObterIdDaUrl('pastoId');
+    const data = await dw3Requisicao(obterServidor(), '/deletePasto/' + id, {
+      method: 'DELETE'
     }, 'Não foi possível remover o pasto.');
 
     if (data.linhasAfetadas !== 1) {
@@ -202,7 +144,7 @@ async function vwDeletePasto() {
 
     window.location.href = '/pastos';
   } catch (error) {
-    alert(error.message || 'Erro ao remover pasto.');
+    alert(error.message);
   } finally {
     btnRemover.disabled = false;
   }

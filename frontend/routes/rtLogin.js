@@ -1,13 +1,11 @@
-// arquivo: routes/rtLogin.js
+const express = require('express');
+const router = express.Router();
 
-var express = require('express');
-var router = express.Router();
-
-router.get('/', function(req, res) {
+router.get('/', (req, res) => {
   res.render('login', {
     title: 'Login',
     showNavbar: false,
-    servidorDw3: process.env.SERVIDOR_DW3 // Endereço do servidor backend
+    servidorDw3: process.env.SERVIDOR_DW3
   });
 });
 

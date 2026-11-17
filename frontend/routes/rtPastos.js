@@ -1,18 +1,16 @@
-// Arquivo: ./routes/rtPastos.js
+const express = require('express');
+const router = express.Router();
 
-var express = require('express');
-var router = express.Router();
-
-router.get('/', function(req, res) {
+router.get('/', (req, res) => {
   res.render('pastos/vwLstPastos', {
     title: 'Pastos',
     showNavbar: true,
     activeMenu: 'pastos',
-    servidorDw3: process.env.SERVIDOR_DW3 // É necessário, pois o front em html não tem acesso ao arquivo .env
+    servidorDw3: process.env.SERVIDOR_DW3
   });
 });
 
-router.get('/form', function(req, res) {
+router.get('/form', (req, res) => {
   res.render('pastos/vwFormPastos', {
     title: 'Formulário de pastos',
     showNavbar: true,

@@ -1,79 +1,51 @@
-//Arquivo apps/login/vwLogin.js
-
 document.addEventListener('DOMContentLoaded', function() {
-  var form = document.getElementById('loginForm');
-  var errorBox = document.getElementById('loginError');
+  const form = document.getElementById('loginForm');
 
-  if (!form) {
-    return;
-  }
-
-  // Ao abrir a tela de login (inclusive pelo menu Sair) a sessão anterior é encerrada.
   vwLogout(form.dataset.servidorDw3);
 
-  form.addEventListener('submit', async function(event) {
+  form.addEventListener('submit', function(event) {
     event.preventDefault();
-
-    var servidorDw3 = form.dataset.servidorDw3; // Valor que vem de routes/rtLogin.js
-    var usuario = document.getElementById('usuario').value;
-    var senha = document.getElementById('senha').value;
-    var submitButton = form.querySelector('button[type="submit"]');
-
-    if (errorBox) {
-      errorBox.classList.add('d-none');
-      errorBox.textContent = '';
-    }
-
-    if (submitButton) {
-      submitButton.disabled = true;
-      submitButton.textContent = 'Entrando...';
-    }
-
-    try {
-      var response = await fetch(servidorDw3 + '/Login', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json'
-        },
-        body: JSON.stringify({
-          UserName: usuario,
-          Password: senha
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Usuário ou senha inválidos.');
-      }
-
-      var data = await response.json();
-      var token = data.token;
-
-      if (!token) {
-        throw new Error('Erro no login. Token não retornado pelo servidor.');
-      }
-
-      localStorage.setItem('token', token); // Salva o token para ser usado nas chamadas ao backend.
-      localStorage.setItem('username', data.username); // Usuário que fez o login.
-      // Usado para verificar se o usuário está ou não logado.
-      // max-age de 2 horas, o mesmo tempo de validade do JWT gerado no backend.
-      document.cookie = 'IsLogged=true; path=/; max-age=' + (120 * 60);
-      window.location.href = '/home';
-
-    } catch (error) {
-      if (errorBox) {
-        errorBox.textContent = error.message || 'Não foi possível realizar o login.';
-        errorBox.classList.remove('d-none');
-      }
-    } finally {
-      if (submitButton) {
-        submitButton.disabled = false;
-        submitButton.textContent = 'Entrar';
-      }
-    }
+    vwLogin(form.dataset.servidorDw3);
   });
 });
 
-// Chama a API de Logout do backend e limpa os dados do usuário no navegador.
+async function vwLogin(servidorDw3) {
+  const errorBox = document.getElementById('loginError');
+  const submitButton = document.querySelector('#loginForm button[type="submit"]');
+
+  errorBox.classList.add('d-none');
+  submitButton.disabled = true;
+  submitButton.textContent = 'Entrando...';
+
+  try {
+    const response = await fetch(servidorDw3 + '/Login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        UserName: document.getElementById('usuario').value.trim(),
+        Password: document.getElementById('senha').value
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.token) {
+      throw new Error('Usuário ou senha inválidos.');
+    }
+
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('username', data.username);
+    document.cookie = 'IsLogged=true; path=/; max-age=' + (120 * 60);
+    window.location.href = '/home';
+  } catch (error) {
+    const mensagem = error instanceof TypeError ? 'Não foi possível conectar ao servidor backend.' : error.message;
+    dw3ExibirErro(errorBox, mensagem);
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = 'Entrar';
+  }
+}
+
 async function vwLogout(servidorDw3) {
   if (localStorage.getItem('token')) {
     try {

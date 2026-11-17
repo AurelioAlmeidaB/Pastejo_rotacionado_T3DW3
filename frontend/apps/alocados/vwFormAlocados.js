@@ -1,29 +1,19 @@
-// Arquivo: apps/alocados/vwFormAlocados.js
-
 document.addEventListener('DOMContentLoaded', async function() {
   if (!dw3IsLogged()) {
     return;
   }
 
-  var form = document.getElementById('frmAlocados');
+  const oper = dw3ObterOperacao();
+  const btnInserir = document.getElementById('btnInserirAlocado');
+  const btnAtualizar = document.getElementById('btnAtualizarAlocado');
+  const btnRemover = document.getElementById('btnRemoverAlocado');
 
-  if (!form) {
-    return;
-  }
-
-  // oper vem da url: Cr (criar), Re (visualizar), Up (atualizar) e De (remover)
-  var oper = new URLSearchParams(window.location.search).get('oper') || 'Cr';
-  var btnInserir = document.getElementById('btnInserirAlocado');
-  var btnAtualizar = document.getElementById('btnAtualizarAlocado');
-  var btnRemover = document.getElementById('btnRemoverAlocado');
-
-  inicializarSelects();
+  dw3InicializarSelect('animalidifk', 'Selecione um animal');
+  dw3InicializarSelect('piqueteidfk', 'Selecione um piquete');
 
   if (oper === 'Cr') {
     btnInserir.classList.remove('d-none');
-    btnInserir.addEventListener('click', function() {
-      vwInsertAlocado();
-    });
+    btnInserir.addEventListener('click', vwInsertAlocado);
     carregarAnimaisToAlocados();
     carregarPiquetesToAlocados();
   }
@@ -36,9 +26,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   if (oper === 'Up') {
     btnAtualizar.classList.remove('d-none');
     btnAtualizar.disabled = true;
-    btnAtualizar.addEventListener('click', function() {
-      vwUpdateAlocado();
-    });
+    btnAtualizar.addEventListener('click', vwUpdateAlocado);
     btnAtualizar.disabled = !(await vwGetAlocadoByID());
   }
 
@@ -46,71 +34,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     bloquearCamposAlocado();
     btnRemover.classList.remove('d-none');
     btnRemover.disabled = true;
-    btnRemover.addEventListener('click', function() {
-      vwDeleteAlocado();
-    });
+    btnRemover.addEventListener('click', vwDeleteAlocado);
     btnRemover.disabled = !(await vwGetAlocadoByID());
   }
 });
 
-// Aqui são inicializados os componentes Select2.js em branco
-function inicializarSelects() {
-  $('#animalidifk').select2({
-    theme: 'bootstrap-5',
-    placeholder: 'Selecione um animal',
-    width: '100%'
-  });
-  $('#piqueteidfk').select2({
-    theme: 'bootstrap-5',
-    placeholder: 'Selecione um piquete',
-    width: '100%'
-  });
-}
-
-// Aqui é preenchido o componente Select2 com os dados vindos da API getAnimaisToAlocados
-async function carregarAnimaisToAlocados() {
-  try {
-    var data = await enviarRequisicaoAlocado('/getAnimaisToAlocados', {
-      headers: dw3MontarHeadersAutenticacao()
-    }, 'Não foi possível carregar a lista de animais.');
-
-    var select = document.getElementById('animalidifk');
-    select.innerHTML = '<option value="">Selecione um animal</option>';
-
-    data.registro.forEach(function(item) {
-      var option = document.createElement('option');
-      option.value = item.animalid;
-      option.textContent = item.nome;
-      select.appendChild(option);
-    });
-
-    $('#animalidifk').trigger('change');
-  } catch (error) {
-    alert(error.message || 'Erro ao carregar animais.');
-  }
-}
-
-// Aqui é preenchido o componente Select2 com os dados vindos da API getPiquetesToAlocados
-async function carregarPiquetesToAlocados() {
-  try {
-    var data = await enviarRequisicaoAlocado('/getPiquetesToAlocados', {
-      headers: dw3MontarHeadersAutenticacao()
-    }, 'Não foi possível carregar a lista de piquetes.');
-
-    var select = document.getElementById('piqueteidfk');
-    select.innerHTML = '<option value="">Selecione um piquete</option>';
-
-    data.registro.forEach(function(item) {
-      var option = document.createElement('option');
-      option.value = item.piqueteid;
-      option.textContent = item.descricao + ' (' + item.pastodescricao + ')';
-      select.appendChild(option);
-    });
-
-    $('#piqueteidfk').trigger('change');
-  } catch (error) {
-    alert(error.message || 'Erro ao carregar piquetes.');
-  }
+function obterServidor() {
+  return document.getElementById('frmAlocados').dataset.servidorDw3;
 }
 
 function bloquearCamposAlocado() {
@@ -129,54 +59,41 @@ function montarAlocadoDoFormulario() {
   };
 }
 
-function obterAlocadoIdDaUrl() {
-  var id = new URLSearchParams(window.location.search).get('alocadoId');
+function validarDatas() {
+  const dataInicio = document.getElementById('datainicio').value;
+  const dataFinal = document.getElementById('datafinal').value;
 
-  if (!id || !/^\d+$/.test(id) || Number(id) <= 0) {
-    throw new Error('ID da alocação inválido.');
+  if (dataFinal && dataFinal < dataInicio) {
+    alert('A data final não pode ser menor que a data de início.');
+    return false;
   }
 
-  return id;
+  return true;
 }
 
-// Faz a requisição ao backend e trata as respostas de erro padrão do sistema.
-async function enviarRequisicaoAlocado(caminho, opcoes, mensagemErro) {
-  var servidorDw3 = document.getElementById('frmAlocados').dataset.servidorDw3;
-
-  if (!servidorDw3) {
-    throw new Error('Endereço do servidor backend não configurado.');
+async function carregarAnimaisToAlocados() {
+  try {
+    const data = await dw3Requisicao(obterServidor(), '/getAnimaisToAlocados', {}, 'Não foi possível carregar a lista de animais.');
+    dw3PreencherSelect('animalidifk', data.registro, 'animalid', (animal) => animal.nome, 'Selecione um animal');
+  } catch (error) {
+    alert(error.message);
   }
-
-  var response = await fetch(servidorDw3 + caminho, opcoes);
-
-  if (!response.ok) {
-    throw new Error(mensagemErro);
-  }
-
-  var data = await response.json();
-
-  if (data.auth === false) {
-    dw3SessaoExpirada(); // JWT expirado: volta para a tela de login.
-    // Promise que nunca termina: interrompe a operação sem mostrar outro alerta de erro.
-    return new Promise(function() {});
-  }
-
-  if (data.status !== 'ok') {
-    throw new Error(data.status || mensagemErro);
-  }
-
-  return data;
 }
 
-// Retorna true quando a alocação foi carregada no formulário.
+async function carregarPiquetesToAlocados() {
+  try {
+    const data = await dw3Requisicao(obterServidor(), '/getPiquetesToAlocados', {}, 'Não foi possível carregar a lista de piquetes.');
+    dw3PreencherSelect('piqueteidfk', data.registro, 'piqueteid', (piquete) => piquete.descricao + ' (' + piquete.pastodescricao + ')', 'Selecione um piquete');
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
 async function vwGetAlocadoByID() {
   try {
-    var id = obterAlocadoIdDaUrl();
-    var data = await enviarRequisicaoAlocado('/getAlocadoByID/' + encodeURIComponent(id), {
-      headers: dw3MontarHeadersAutenticacao()
-    }, 'Não foi possível carregar a alocação.');
-
-    var registro = Array.isArray(data.registro) ? data.registro[0] : null;
+    const id = dw3ObterIdDaUrl('alocadoId');
+    const data = await dw3Requisicao(obterServidor(), '/getAlocadoByID/' + id, {}, 'Não foi possível carregar a alocação.');
+    const registro = data.registro[0];
 
     if (!registro) {
       throw new Error('Alocação não encontrada.');
@@ -186,76 +103,55 @@ async function vwGetAlocadoByID() {
     document.getElementById('datainicio').value = registro.datainicio ?? '';
     document.getElementById('datafinal').value = registro.datafinal ?? '';
 
-    // Carrega os componentes Select2 e seleciona o valor do registro.
     await carregarAnimaisToAlocados();
-    adicionarOpcaoSeFaltar('animalidifk', registro.animalidifk, registro.animalnome);
-    $('#animalidifk').val(String(registro.animalidifk)).trigger('change');
+    dw3SelecionarOpcao('animalidifk', registro.animalidifk, registro.animalnome);
+
     await carregarPiquetesToAlocados();
-    adicionarOpcaoSeFaltar('piqueteidfk', registro.piqueteidfk, registro.piquetedescricao);
-    $('#piqueteidfk').val(String(registro.piqueteidfk)).trigger('change');
+    dw3SelecionarOpcao('piqueteidfk', registro.piqueteidfk, registro.piquetedescricao);
+
     return true;
   } catch (error) {
-    alert(error.message || 'Erro ao carregar alocação.');
+    alert(error.message);
     return false;
   }
 }
 
 async function vwInsertAlocado() {
-  var form = document.getElementById('frmAlocados');
-  var btnInserir = document.getElementById('btnInserirAlocado');
+  const btnInserir = document.getElementById('btnInserirAlocado');
 
-  if (!form.reportValidity()) {
-    return;
-  }
-
-  var dataInicio = document.getElementById('datainicio').value;
-  var dataFinal = document.getElementById('datafinal').value;
-
-  if (dataFinal && dataFinal < dataInicio) {
-    alert('A data final não pode ser menor que a data de início.');
+  if (!document.getElementById('frmAlocados').reportValidity() || !validarDatas()) {
     return;
   }
 
   try {
     btnInserir.disabled = true;
 
-    await enviarRequisicaoAlocado('/insertAlocado', {
+    await dw3Requisicao(obterServidor(), '/insertAlocado', {
       method: 'POST',
-      headers: dw3MontarHeadersAutenticacao({ 'content-type': 'application/json' }),
       body: JSON.stringify(montarAlocadoDoFormulario())
     }, 'Não foi possível inserir a alocação.');
 
     window.location.href = '/alocados';
   } catch (error) {
-    alert(error.message || 'Erro ao inserir alocação.');
+    alert(error.message);
   } finally {
     btnInserir.disabled = false;
   }
 }
 
 async function vwUpdateAlocado() {
-  var form = document.getElementById('frmAlocados');
-  var btnAtualizar = document.getElementById('btnAtualizarAlocado');
+  const btnAtualizar = document.getElementById('btnAtualizarAlocado');
 
-  if (btnAtualizar.disabled || !form.reportValidity()) {
-    return;
-  }
-
-  var dataInicio = document.getElementById('datainicio').value;
-  var dataFinal = document.getElementById('datafinal').value;
-
-  if (dataFinal && dataFinal < dataInicio) {
-    alert('A data final não pode ser menor que a data de início.');
+  if (btnAtualizar.disabled || !document.getElementById('frmAlocados').reportValidity() || !validarDatas()) {
     return;
   }
 
   try {
-    var id = obterAlocadoIdDaUrl();
     btnAtualizar.disabled = true;
 
-    var data = await enviarRequisicaoAlocado('/updateAlocado/' + encodeURIComponent(id), {
+    const id = dw3ObterIdDaUrl('alocadoId');
+    const data = await dw3Requisicao(obterServidor(), '/updateAlocado/' + id, {
       method: 'PUT',
-      headers: dw3MontarHeadersAutenticacao({ 'content-type': 'application/json' }),
       body: JSON.stringify(montarAlocadoDoFormulario())
     }, 'Não foi possível atualizar a alocação.');
 
@@ -266,26 +162,25 @@ async function vwUpdateAlocado() {
     alert('Alocação atualizada com sucesso.');
     window.location.href = '/alocados';
   } catch (error) {
-    alert(error.message || 'Erro ao atualizar alocação.');
+    alert(error.message);
   } finally {
     btnAtualizar.disabled = false;
   }
 }
 
 async function vwDeleteAlocado() {
-  var btnRemover = document.getElementById('btnRemoverAlocado');
+  const btnRemover = document.getElementById('btnRemoverAlocado');
 
   if (btnRemover.disabled || !window.confirm('Confirma a remoção desta alocação?')) {
     return;
   }
 
   try {
-    var id = obterAlocadoIdDaUrl();
     btnRemover.disabled = true;
 
-    var data = await enviarRequisicaoAlocado('/deleteAlocado/' + encodeURIComponent(id), {
-      method: 'DELETE',
-      headers: dw3MontarHeadersAutenticacao()
+    const id = dw3ObterIdDaUrl('alocadoId');
+    const data = await dw3Requisicao(obterServidor(), '/deleteAlocado/' + id, {
+      method: 'DELETE'
     }, 'Não foi possível remover a alocação.');
 
     if (data.linhasAfetadas !== 1) {
@@ -294,21 +189,8 @@ async function vwDeleteAlocado() {
 
     window.location.href = '/alocados';
   } catch (error) {
-    alert(error.message || 'Erro ao remover alocação.');
+    alert(error.message);
   } finally {
     btnRemover.disabled = false;
-  }
-}
-
-// Uma alocação antiga pode ser de um animal ou piquete que já foi removido.
-// Eles não vêm na lista do Select2, então a opção é acrescentada para o campo não ficar em branco.
-function adicionarOpcaoSeFaltar(idSelect, valor, texto) {
-  var select = document.getElementById(idSelect);
-
-  if (!select.querySelector('option[value="' + valor + '"]')) {
-    var option = document.createElement('option');
-    option.value = valor;
-    option.textContent = texto + ' (removido)';
-    select.appendChild(option);
   }
 }

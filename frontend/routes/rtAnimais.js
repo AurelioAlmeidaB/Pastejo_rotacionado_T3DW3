@@ -1,18 +1,16 @@
-// Arquivo: ./routes/rtAnimais.js
+const express = require('express');
+const router = express.Router();
 
-var express = require('express');
-var router = express.Router();
-
-router.get('/', function(req, res) {
+router.get('/', (req, res) => {
   res.render('animais/vwLstAnimais', {
     title: 'Animais',
     showNavbar: true,
     activeMenu: 'animais',
-    servidorDw3: process.env.SERVIDOR_DW3 // É necessário, pois o front em html não tem acesso ao arquivo .env
+    servidorDw3: process.env.SERVIDOR_DW3
   });
 });
 
-router.get('/form', function(req, res) {
+router.get('/form', (req, res) => {
   res.render('animais/vwFormAnimais', {
     title: 'Formulário de animais',
     showNavbar: true,
