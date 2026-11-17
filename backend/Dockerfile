@@ -1,5 +1,3 @@
-## Diretório: backend/
-
 FROM node:24-bookworm-slim
 
 ENV NODE_ENV=production

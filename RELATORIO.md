@@ -62,6 +62,10 @@ backend/
   .env / .env.example          configurações (porta, chave do JWT, dados do banco) — o .env não vai para o GitHub
   database/databaseconfig.js   conexão com o PostgreSQL (pool do pacote pg)
   routes/router.js             todas as rotas das APIs
+  utils/
+    validacao.js               funções de validação (texto vazio, número, ID, data)
+    validaID.js                middleware que recusa IDs inválidos na URL
+    formataData.js             tira a hora das datas antes de responder
   apps/
     login/      model, controller, tests   login, logout e verificação do JWT
     pastos/     model, controller, tests
@@ -89,6 +93,9 @@ subir-docker.sh                cria as imagens e sobe os dois containers
 O padrão é o mesmo da apostila: cada módulo tem sua própria pasta dentro de `apps/` (estilo Django), com
 **model** (SQL), **controller** (recebe a requisição e responde JSON) e **tests** (arquivos `.rest`).
 
+O código segue um padrão único: back-end com aspas duplas, front-end com aspas simples, `const`/`let` (sem `var`),
+funções `async` e nenhum comentário no código — as explicações ficam neste relatório.
+
 ---
 
 ## 4. Back-end
@@ -98,7 +105,7 @@ O padrão é o mesmo da apostila: cada módulo tem sua própria pasta dentro de 
 1. Carrega as variáveis do `.env` com `dotenv`.
 2. Configura o **CORS**: libera o navegador a chamar a API vinda de outra porta (o front está na 43100 e o back na 43000).
    Também responde às requisições `OPTIONS` que o navegador faz antes de um `POST`/`PUT`/`DELETE`.
-3. `bodyParser` e `express.json()` transformam o corpo JSON da requisição em `req.body`.
+3. `express.json()` transforma o corpo JSON da requisição em `req.body`.
 4. `app.use(router)` liga as rotas de `routes/router.js`.
 5. `app.listen` inicia o servidor na porta do `.env` (43000).
 
@@ -114,7 +121,11 @@ middleware **`appLogin.AutenticaJWT`**; só `/Login` e `/Logout` ficam abertas.
 
 ```js
 routerApp.get("/getAllPastos", appLogin.AutenticaJWT, appPastos.GetAllPastos);
+routerApp.get("/getPastoByID/:pastoid", appLogin.AutenticaJWT, validaID, appPastos.GetPastoByID);
 ```
+
+As rotas que recebem ID na URL também passam pelo middleware **`validaID`** (`utils/validaID.js`): se o ID não for
+um número inteiro positivo (ex.: `/getPastoByID/abc`), a API responde `{ status: "ID inválido." }` sem consultar o banco.
 
 ### 4.4 Módulo de login (`apps/login`)
 
@@ -137,21 +148,33 @@ Os 4 módulos seguem exatamente o mesmo formato. Exemplo com **Pasto**:
 |---|---|
 | `GetAllPastos()` | `SELECT` de todos com `removido = false` |
 | `GetPastoByID(id)` | `SELECT` pelo ID, também só com `removido = false` |
-| `InsertPasto(registro)` | `INSERT ... values(default, $1, $2, false)` |
-| `UpdatePasto(id, registro)` | `UPDATE ... WHERE pastoid = $1 and removido = false` |
+| `ValidaPasto(registro)` | regras do registro; devolve a mensagem de erro ou `null` |
+| `InsertPasto(registro)` | valida e faz `INSERT INTO pasto VALUES (default, $1, $2, false)` |
+| `UpdatePasto(id, registro)` | valida e faz `UPDATE ... WHERE pastoid = $1 AND removido = false` |
 | `DeletePasto(id)` | **soft delete**: `UPDATE pasto SET removido = true` |
 
 Insert, Update e Delete devolvem `{ msg, linhasAfetadas }`: `msg` é `"ok"` ou a mensagem de erro do banco
 (capturada no `try/catch`, ex.: chave estrangeira inválida), e `linhasAfetadas` diz quantas linhas mudaram.
 
-**Controller** (`apps/pastos/controller/ctlPastos.js`) — pega os dados da requisição (`req.params.pastoid`,
-`request.body`), chama o model e responde JSON:
+**Controller** (`apps/pastos/controller/ctlPastos.js`) — funções `async (req, res)` que pegam os dados da
+requisição (`req.params.pastoid`, `req.body`), chamam o model e respondem JSON:
 
 - GetAll/GetByID → `{ status: "ok", registro: [...] }`
 - Insert/Update/Delete → `{ status: msg, linhasAfetadas: n }`
 
-Nos módulos com data (animais e alocados), a função **`formataData`** do controller corta a parte da hora
-(`2026-10-01T03:00:00.000Z` → `2026-10-01`) antes de responder.
+Nos módulos com data (animais e alocados), o controller usa **`formataData`** (`utils/formataData.js`) para cortar
+a parte da hora (`2026-10-01T03:00:00.000Z` → `2026-10-01`) antes de responder.
+
+**Validações no Insert e no Update** (função `ValidaXxx` de cada model, com as funções de `utils/validacao.js`):
+
+| Tabela | Regras |
+|---|---|
+| pasto | descrição preenchida (não aceita só espaços); área total maior que zero |
+| piquete | descrição preenchida; pasto informado; latitude entre -90 e 90; longitude entre -180 e 180 |
+| animal | nome preenchido; data de nascimento válida e não futura |
+| alocado | animal, piquete e data de início informados; data final não menor que a inicial; o animal não pode estar em dois piquetes ao mesmo tempo |
+
+Os textos são gravados sem espaços sobrando no começo e no fim (`trim()`).
 
 **Regras de negócio no Delete** (para não deixar registros "órfãos"):
 
@@ -162,12 +185,7 @@ Nos módulos com data (animais e alocados), a função **`formataData`** do cont
 Alocações já encerradas não impedem a remoção: elas continuam no histórico (a lista de alocações mostra o nome do
 animal/piquete mesmo depois de removido, e o formulário mostra a opção marcada como "(removido)").
 
-**Regras de negócio da alocação** (função `ValidaAlocado` em `mdlAlocados.js`, usada no Insert e no Update):
-
-- a data final não pode ser menor que a data de início;
-- o mesmo animal não pode estar em dois piquetes ao mesmo tempo (períodos que se sobrepõem).
-
-Nesses casos o model devolve `linhasAfetadas: 0` e uma mensagem explicando o motivo, que a tela mostra ao usuário.
+Quando uma regra não é atendida o model devolve `linhasAfetadas: 0` e uma mensagem explicando o motivo, que a tela mostra ao usuário.
 Erros do banco (por exemplo, valor inválido ou chave estrangeira inexistente) também voltam em `status`.
 
 **Joins**: `GetAllPiquetes` traz junto o nome do pasto (`pastodescricao`) e `GetAllAlocados` traz o nome do animal
@@ -232,8 +250,18 @@ os outros chamam cada API com `Authorization: Bearer {{accessToken}}`. Clique em
 | `dw3IsLogged()` | se o cookie `IsLogged` não existir, manda para `/login` |
 | `dw3ClearIsLoggedCookie()` | apaga o cookie `IsLogged` |
 | `dw3MontarHeadersAutenticacao(headers)` | acrescenta `Authorization: Bearer <token>` nas requisições |
-| `dw3OcultarBotao(id)` | esconde um botão |
 | `dw3SessaoExpirada()` | quando a API responde `auth: false` (JWT vencido ou inválido), apaga o token e o cookie, avisa e volta para o login |
+| `dw3Requisicao(servidor, caminho, opcoes, mensagemErro)` | faz o `fetch` com o token, trata servidor fora do ar, sessão expirada e `status` diferente de `"ok"`; usada por todas as telas |
+| `dw3ObterIdDaUrl(parametro)` / `dw3ObterOperacao()` | leem e validam o ID e o `oper` da URL |
+| `dw3ColunaOperacoes(campoId)` / `dw3BotoesOperacoes(id)` | coluna da tabela com os botões Visualizar, Atualizar e Remover |
+| `dw3ConfigurarOperacoes(tabela, rota, parametro)` | faz os botões da tabela abrirem o formulário com `oper=Re/Up/De` |
+| `dw3RenderizarData(textoVazio)` | mostra datas no formato `dd/mm/aaaa` na tabela |
+| `dw3InicializarSelect` / `dw3PreencherSelect` / `dw3SelecionarOpcao` | montam e preenchem os campos Select2 |
+| `dw3ExibirErro(alertBox, mensagem)` / `dw3EscaparHtml(valor)` | mostram mensagens e escapam texto |
+| `DW3_IDIOMA_DATATABLES` | textos do DataTables em português |
+
+As colunas de texto das tabelas usam `DataTable.render.text()`, que mostra o conteúdo como texto: se alguém
+cadastrar HTML ou script numa descrição, ele aparece escrito na tela e **não é executado** (proteção contra XSS).
 
 ### 5.4 Tela de lista (`vwLstXxx.js`)
 
@@ -253,9 +281,11 @@ O mesmo formulário serve para as 4 operações, conforme o `oper` da URL:
 | `Up` | carrega o registro e mostra **Atualizar** → `vwUpdateXxx()` → `PUT /updateXxx/:id` |
 | `De` | bloqueia os campos, carrega o registro e mostra **Remover** → confirmação → `vwDeleteXxx()` → `DELETE /deleteXxx/:id` |
 
-Funções auxiliares em cada formulário: `bloquearCamposXxx` (deixa os campos só leitura), `montarXxxDoFormulario`
-(monta o JSON enviado à API), `obterXxxIdDaUrl` (pega e valida o ID da URL) e `enviarRequisicaoXxx`
-(faz o `fetch` e trata erro de servidor, token expirado e `status` diferente de `"ok"`).
+Funções de cada formulário: `bloquearCamposXxx` (deixa os campos só leitura) e `montarXxxDoFormulario`
+(monta o JSON enviado à API). As chamadas às APIs passam por `dw3Requisicao`.
+
+Validações da tela: campos de texto não aceitam só espaços, área total maior que zero, data de nascimento até hoje
+e, na alocação, data final não menor que a inicial. O back-end repete essas validações.
 
 Os formulários de **piquete** e **alocação** usam o **Select2** para escolher pasto, animal e piquete
 (`carregarPastosToPiquetes`, `carregarAnimaisToAlocados`, `carregarPiquetesToAlocados`). O de alocação ainda
@@ -293,14 +323,15 @@ CMD ["node", "app.js"]              # inicia o servidor
 O **`.dockerignore`** impede que `node_modules`, `.git` e os arquivos `.env` entrem na imagem. As configurações são
 passadas só na hora de rodar, com `--env-file`.
 
-O **`subir-docker.sh`** faz:
+O **`subir-docker.sh`** liga o container do banco (`dw3postgres`) se ele existir e estiver parado, remove os
+containers antigos e faz:
 
 ```bash
-docker build -t pastejo_backend_img:1.0 .                     # cria a imagem do back-end
-docker run -d --name pastejo_backend_ctner --env-file .env \
+docker build -t pastejo_backend_img:1.0 backend
+docker run -d --name pastejo_backend_ctner --env-file backend/.env \
   -p 43000:43000 --restart unless-stopped pastejo_backend_img:1.0
-docker build -t pastejo_frontend_img:1.0 .                    # cria a imagem do front-end
-docker run -d --name pastejo_frontend_ctner --env-file dw3frontend.env \
+docker build -t pastejo_frontend_img:1.0 frontend
+docker run -d --name pastejo_frontend_ctner --env-file frontend/dw3frontend.env \
   -p 43100:43100 --restart unless-stopped pastejo_frontend_img:1.0
 ```
 
@@ -355,7 +386,8 @@ Comandos úteis: `docker ps` (containers rodando), `docker logs pastejo_backend_
 O front-end atual é básico e segue o modelo da aula. Para melhorar o visual sem quebrar nada, mantenha:
 
 - os **nomes das funções** `vwGetAll...`, `vwGet...ByID`, `vwInsert...`, `vwUpdate...`, `vwDelete...` (o trabalho exige uma por API);
-- o uso de `dw3MontarHeadersAutenticacao()` em toda chamada às APIs (senão o back-end recusa por falta de token);
+- as chamadas às APIs sempre por `dw3Requisicao()` (ela envia o token; sem ele o back-end recusa);
+- o `render: DataTable.render.text()` nas colunas de texto das tabelas (proteção contra XSS);
 - os **ids dos campos** iguais aos nomes das colunas (`descricao`, `areatotal`, `pastoidfk`, `animalidifk`, ...), porque
   `montarXxxDoFormulario` e `vwGetXxxByID` dependem deles;
 - o formato das respostas da API (seção 4.5) e o fluxo `oper=Cr/Re/Up/De`;
