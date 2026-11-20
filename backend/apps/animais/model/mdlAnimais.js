@@ -93,14 +93,14 @@ const DeleteAnimal = async (animalIDPar) => {
     const totalAlocados = (
       await db.query(
         "SELECT count(*) FROM alocado " +
-          "WHERE animalidifk = $1 AND datafinal IS NULL AND removido = false",
+          "WHERE animalidifk = $1 AND (datafinal IS NULL OR datafinal >= CURRENT_DATE) AND removido = false",
         [animalIDPar]
       )
     ).rows[0].count;
 
     if (Number(totalAlocados) > 0) {
       return {
-        msg: "Este animal está alocado em um piquete (alocação em andamento) e não pode ser removido.",
+        msg: "Este animal está alocado em um piquete (alocação em andamento ou futura) e não pode ser removido.",
         linhasAfetadas: 0,
       };
     }
