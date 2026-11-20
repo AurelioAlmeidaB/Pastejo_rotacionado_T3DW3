@@ -66,6 +66,28 @@ const ValidaAlocado = async (alocadoIDPar, registroPar) => {
     return "A data final não pode ser menor que a data de início.";
   }
 
+  const animalAtivo = (
+    await db.query(
+      "SELECT count(*) FROM animal WHERE animalid = $1 AND removido = false",
+      [registroPar.animalidifk]
+    )
+  ).rows[0].count;
+
+  if (Number(animalAtivo) === 0) {
+    return "O animal selecionado não existe ou foi removido.";
+  }
+
+  const piqueteAtivo = (
+    await db.query(
+      "SELECT count(*) FROM piquete WHERE piqueteid = $1 AND removido = false",
+      [registroPar.piqueteidfk]
+    )
+  ).rows[0].count;
+
+  if (Number(piqueteAtivo) === 0) {
+    return "O piquete selecionado não existe ou foi removido.";
+  }
+
   const totalConflitos = (
     await db.query(
       "SELECT count(*) FROM alocado " +
