@@ -8,6 +8,10 @@ const pool = new Pool({
   port: process.env.DB_PORT,
 });
 
+pool.on("error", (err) => {
+  console.error("Erro na conexão com o banco:", err.message);
+});
+
 module.exports = {
   query: (text, params) => pool.query(text, params),
 };

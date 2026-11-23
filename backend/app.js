@@ -22,6 +22,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(router);
 
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ status: "Erro no servidor: " + err.message });
+});
+
 app.listen(port, () => {
   console.log("Executando a aplicação:", process.env.APP_NAME);
   console.log(`App listening at port ${port}`);

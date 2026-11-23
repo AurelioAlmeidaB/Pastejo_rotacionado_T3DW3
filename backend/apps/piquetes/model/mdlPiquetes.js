@@ -32,7 +32,7 @@ const GetPastosToPiquetes = async () => {
   ).rows;
 };
 
-const ValidaPiquete = (registroPar) => {
+const ValidaPiquete = async (registroPar) => {
   if (textoVazio(registroPar.descricao)) {
     return "Informe a descrição do piquete.";
   }
@@ -49,6 +49,17 @@ const ValidaPiquete = (registroPar) => {
     return "A longitude deve estar entre -180 e 180.";
   }
 
+  const pastoAtivo = (
+    await db.query(
+      "SELECT count(*) FROM pasto WHERE pastoid = $1 AND removido = false",
+      [registroPar.pastoidfk]
+    )
+  ).rows[0].count;
+
+  if (Number(pastoAtivo) === 0) {
+    return "O pasto selecionado não existe ou foi removido.";
+  }
+
   return null;
 };
 
@@ -57,7 +68,7 @@ const InsertPiquete = async (registroPar) => {
   let msg = "ok";
 
   try {
-    const erro = ValidaPiquete(registroPar);
+    const erro = await ValidaPiquete(registroPar);
 
     if (erro) {
       return { msg: erro, linhasAfetadas: 0 };
@@ -87,7 +98,7 @@ const UpdatePiquete = async (piqueteIDPar, registroPar) => {
   let msg = "ok";
 
   try {
-    const erro = ValidaPiquete(registroPar);
+    const erro = await ValidaPiquete(registroPar);
 
     if (erro) {
       return { msg: erro, linhasAfetadas: 0 };
@@ -122,14 +133,14 @@ const DeletePiquete = async (piqueteIDPar) => {
     const totalAlocados = (
       await db.query(
         "SELECT count(*) FROM alocado " +
-          "WHERE piqueteidfk = $1 AND datafinal IS NULL AND removido = false",
+          "WHERE piqueteidfk = $1 AND (datafinal IS NULL OR datafinal >= CURRENT_DATE) AND removido = false",
         [piqueteIDPar]
       )
     ).rows[0].count;
 
     if (Number(totalAlocados) > 0) {
       return {
-        msg: "Este piquete possui animais alocados (alocação em andamento) e não pode ser removido.",
+        msg: "Este piquete possui animais alocados (alocação em andamento ou futura) e não pode ser removido.",
         linhasAfetadas: 0,
       };
     }

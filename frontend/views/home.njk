@@ -4,23 +4,52 @@
   <header class="page-header">
     <p class="page-kicker text-primary fw-semibold mb-2">Módulo agrícola</p>
     <h1 class="display-6 fw-bold mb-2">Painel principal</h1>
-    <p class="text-secondary mb-0">Use a navegação superior para acessar pastos, piquetes, animais, alocações ou sair da aplicação.</p>
+    <p class="text-secondary mb-0">Organize os pastos em piquetes e faça o rodízio dos animais, deixando o capim descansar entre um pastejo e outro.</p>
   </header>
 
-  <div class="hero-card card border-0 shadow-sm">
-    <div class="card-body p-4 p-lg-5">
-      <div class="row g-4 align-items-center">
-        <div class="col-lg-8">
-          <h2 class="h4 fw-semibold mb-3">Bem-vindo ao sistema</h2>
-          <p class="text-secondary mb-0">Cadastre os pastos e seus piquetes, os animais e controle em qual piquete cada animal está alocado.</p>
+  <div class="row g-4">
+    <div class="col-12 col-md-6 col-lg-3">
+      <a class="modulo-card card h-100 shadow-sm" href="/pastos">
+        <div class="card-body p-4">
+          <span class="modulo-icone mb-3"><i class="ico ico-capim"></i></span>
+          <h2 class="h5 fw-bold">Pastos</h2>
+          <p class="text-secondary mb-3">As áreas da propriedade e o tamanho de cada uma, em hectares.</p>
+          <span class="modulo-link">Acessar <i class="bi bi-arrow-right"></i></span>
         </div>
-        <div class="col-lg-4 d-flex flex-column gap-2">
-          <a class="btn btn-primary" href="/alocados">Ir para alocações</a>
-          <a class="btn btn-outline-primary" href="/pastos">Ir para pastos</a>
-          <a class="btn btn-outline-primary" href="/piquetes">Ir para piquetes</a>
-          <a class="btn btn-outline-primary" href="/animais">Ir para animais</a>
+      </a>
+    </div>
+
+    <div class="col-12 col-md-6 col-lg-3">
+      <a class="modulo-card card h-100 shadow-sm" href="/piquetes">
+        <div class="card-body p-4">
+          <span class="modulo-icone palha mb-3"><i class="ico ico-piquete"></i></span>
+          <h2 class="h5 fw-bold">Piquetes</h2>
+          <p class="text-secondary mb-3">As divisões de cada pasto, com sua localização.</p>
+          <span class="modulo-link">Acessar <i class="bi bi-arrow-right"></i></span>
         </div>
-      </div>
+      </a>
+    </div>
+
+    <div class="col-12 col-md-6 col-lg-3">
+      <a class="modulo-card card h-100 shadow-sm" href="/animais">
+        <div class="card-body p-4">
+          <span class="modulo-icone terra mb-3"><i class="ico ico-vaca"></i></span>
+          <h2 class="h5 fw-bold">Animais</h2>
+          <p class="text-secondary mb-3">O rebanho cadastrado, com nome e data de nascimento.</p>
+          <span class="modulo-link">Acessar <i class="bi bi-arrow-right"></i></span>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-12 col-md-6 col-lg-3">
+      <a class="modulo-card card h-100 shadow-sm" href="/alocados">
+        <div class="card-body p-4">
+          <span class="modulo-icone laranja mb-3"><i class="bi bi-signpost-split"></i></span>
+          <h2 class="h5 fw-bold">Alocações</h2>
+          <p class="text-secondary mb-3">Em qual piquete cada animal está e por quanto tempo ficou.</p>
+          <span class="modulo-link">Acessar <i class="bi bi-arrow-right"></i></span>
+        </div>
+      </a>
     </div>
   </div>
 
