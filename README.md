@@ -12,7 +12,13 @@ CRUD das tabelas pasto, piquete, animal e alocado do módulo agrícola de pastej
 
 1. Banco: com o PostgreSQL na porta 5432, criar o banco `pastejo` e executar `backend/databaseConfig.sql`.
 2. Back-end: em `backend/`, copiar `.env.example` para `.env` e preencher.
-3. Subir os containers: `bash subir-docker.sh`
+3. Na raiz do projeto, criar as imagens e subir os containers:
+   ```bash
+   docker build -t pastejo_backend_img:1.0 backend
+   docker run -d --name pastejo_backend_ctner --env-file backend/.env -p 43000:43000 --restart unless-stopped pastejo_backend_img:1.0
+   docker build -t pastejo_frontend_img:1.0 frontend
+   docker run -d --name pastejo_frontend_ctner --env-file frontend/dw3frontend.env -p 43100:43100 --restart unless-stopped pastejo_frontend_img:1.0
+   ```
 4. Acessar http://localhost:43100 (usuário `qwe`, senha `qwe`).
 
 A explicação do código está em [RELATORIO.md](RELATORIO.md).

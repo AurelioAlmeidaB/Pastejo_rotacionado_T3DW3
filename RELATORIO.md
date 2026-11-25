@@ -87,7 +87,6 @@ frontend/
         vwLstXxx.njk + vwLstXxx.js     tela de lista (tabela)
         vwFormXxx.njk + vwFormXxx.js   tela de formulário (inserir, ver, atualizar, remover)
   Dockerfile, .dockerignore
-subir-docker.sh                cria as imagens e sobe os dois containers
 ```
 
 O padrão é o mesmo da apostila: cada módulo tem sua própria pasta dentro de `apps/` (estilo Django), com
@@ -323,8 +322,7 @@ CMD ["node", "app.js"]              # inicia o servidor
 O **`.dockerignore`** impede que `node_modules`, `.git` e os arquivos `.env` entrem na imagem. As configurações são
 passadas só na hora de rodar, com `--env-file`.
 
-O **`subir-docker.sh`** liga o container do banco (`dw3postgres`) se ele existir e estiver parado, remove os
-containers antigos e faz:
+Na raiz do projeto, as imagens são criadas e os containers são iniciados com:
 
 ```bash
 docker build -t pastejo_backend_img:1.0 backend
@@ -342,7 +340,8 @@ Dois detalhes importantes de endereço:
 - `SERVIDOR_DW3=http://localhost:43000` no `dw3frontend.env`: quem usa esse endereço é o **navegador**, por isso é `localhost`.
 
 Comandos úteis: `docker ps` (containers rodando), `docker logs pastejo_backend_ctner` (mensagens do servidor),
-`docker stop` / `docker start` (parar / ligar). Depois de alterar o código, rode `bash subir-docker.sh` de novo
+`docker stop` / `docker start` (parar / ligar). Depois de alterar o código, remova os containers
+(`docker rm -f pastejo_backend_ctner pastejo_frontend_ctner`) e rode de novo os comandos `docker build` e `docker run`
 (a imagem não muda sozinha).
 
 ---
@@ -362,7 +361,7 @@ Comandos úteis: `docker ps` (containers rodando), `docker logs pastejo_backend_
 | JWT guardado após o login | `localStorage` (`token`, `username`) + cookie `IsLogged` |
 | 5 funções no front-end por tabela | `vwGetAll`, `vwGetByID`, `vwInsert`, `vwUpdate`, `vwDelete` em cada `apps/*` |
 | Front-end sem acesso ao banco | o front-end só usa `fetch` para as APIs |
-| Os dois servidores em Docker | `Dockerfile` + `.dockerignore` em cada pasta, `subir-docker.sh` |
+| Os dois servidores em Docker | `Dockerfile` + `.dockerignore` em cada pasta (seção 6) |
 | `.gitignore` | ignora `node_modules` e os `.env` |
 
 ---
@@ -376,7 +375,7 @@ Comandos úteis: `docker ps` (containers rodando), `docker logs pastejo_backend_
    docker exec -i dw3postgres psql -U postgres -d pastejo < backend/databaseConfig.sql
    ```
 3. Em `backend/`, copiar `.env.example` para `.env` e preencher `DB_USER`, `DB_PASS` e `SECRET_API`.
-4. Na raiz: `bash subir-docker.sh`
+4. Na raiz, criar as imagens e subir os containers com os comandos `docker build` / `docker run` da seção 6
 5. Abrir http://localhost:43100 e entrar com `qwe` / `qwe`.
 
 ---
@@ -392,7 +391,7 @@ O front-end atual é básico e segue o modelo da aula. Para melhorar o visual se
   `montarXxxDoFormulario` e `vwGetXxxByID` dependem deles;
 - o formato das respostas da API (seção 4.5) e o fluxo `oper=Cr/Re/Up/De`;
 - o `<script src="/js/dw3frontend.js">` em todas as páginas que precisam de login;
-- depois de qualquer mudança, recriar os containers com `bash subir-docker.sh`.
+- depois de qualquer mudança, recriar os containers (`docker build` / `docker run`, seção 6).
 
 Ideias de melhoria visual: cards com totais na tela inicial (pastos, piquetes, animais, alocações em andamento),
 filtro "só alocações em andamento", mapa dos piquetes usando latitude/longitude, ícones no menu.
